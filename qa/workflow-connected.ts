@@ -9,12 +9,14 @@ import {configuration} from '../server/config.js';
 import {postgresTls} from '../server/postgres-tls.js';
 import {caseStore} from '../server/database.js';
 import {createApp} from '../server/app.js';
+import {workflowCommandRace} from './workflow-command-race.js';
 const config=configuration();
 if(!config.ready||process.env.RUN_CONNECTED_CHECKS!=='true'||!process.env.MIGRATION_DATABASE_URL)throw Error('Dedicated connected checks must be enabled privately.');
 const admin=new URL(process.env.MIGRATION_DATABASE_URL);
 if(!(admin.hostname==='db.'+process.env.SUPABASE_PROJECT_REF+'.supabase.co'||(admin.hostname.endsWith('.pooler.supabase.com')&&decodeURIComponent(admin.username)==='postgres.'+process.env.SUPABASE_PROJECT_REF)))throw Error('Dedicated audit login required.');
 const options={ssl:postgresTls(),connectionTimeoutMillis:8000,statement_timeout:10000};
 const pool=new pg.Pool({connectionString:config.databaseUrl,...options});
+const racePool=new pg.Pool({connectionString:config.databaseUrl,max:2,...options});
 const audit=new pg.Pool({connectionString:admin.toString(),...options});
 const auth=()=>createClient(config.url!,config.key!,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(8000)})}});
 let stage='managed identities';
@@ -44,6 +46,9 @@ try{
  const key=randomUUID();const release=await post(reviewer,'/api/workflow/'+id+'/release',outgoing,key);assert.equal(release.status,201,JSON.stringify(release.body));const versionId=release.body.id;
  assert.equal((await post(reviewer,'/api/workflow/'+id+'/release',outgoing,key)).body.id,versionId);
  assert.equal((await post(reviewer,'/api/workflow/'+id+'/release',{...outgoing,narrative:'changed'},key)).status,409);
+ stage='independent-backend workflow command race';
+ const raceContent={...outgoing,narrative:'Fictional second outgoing version created by a distinct-connection idempotency race.'};
+ const workflowRace=await workflowCommandRace(racePool,audit,reviewer.user.id,id,raceContent);
  stage='approved office projection';
  const officeView=await get(office,'/api/workflow/'+id);assert.equal(officeView.status,200);assert.equal(officeView.body.narrative,undefined);assert.equal(officeView.body.concerns,undefined);assert.ok(!JSON.stringify(officeView.body).includes('PRIVATE_DEMO_ONLY'));
  assert.equal((await get(office,'/api/complaints/'+id)).status,404);
@@ -57,10 +62,10 @@ try{
  assert.equal((await post(office,'/api/workflow/'+id+'/acknowledge',{versionId,text:'Fictional office receipt acknowledged.'},ackKey)).body.id,ack.body.id);
  const responseKey=randomUUID();const answer=await post(office,'/api/workflow/'+id+'/response',response,responseKey);assert.equal(answer.status,201);
  assert.equal((await post(office,'/api/workflow/'+id+'/response',response,responseKey)).body.id,answer.body.id);
- const final=await get(citizen,'/api/workflow/'+id);assert.equal(final.body.versions.length,1);assert.equal(final.body.history.length,2);
+ const final=await get(citizen,'/api/workflow/'+id);assert.equal(final.body.versions.length,2);assert.equal(final.body.history.length,2);assert.ok(final.body.versions.some((v:{id:string})=>v.id===workflowRace.versionId));
  const original=await get(citizen,'/api/complaints/'+id);assert.equal(original.body.narrative,payload.narrative);assert.deepEqual(original.body.concerns,payload.concerns);assert.equal(original.body.status,'submitted');
  await fs.mkdir('.cache',{recursive:true});
  for(const [name,session] of [['citizen',citizen],['reviewer',reviewer],['office',office]] as const)await fs.writeFile('.cache/t04-'+name+'.json',JSON.stringify({access_token:session.access_token,refresh_token:session.refresh_token}));
  await fs.writeFile('.cache/t04-case.json',JSON.stringify({id}));
- console.log('WORKFLOW_CONNECTED_PASSED: six distinct managed identities; assigned reviewer; pre-release and unrelated denials; office projection excludes private sentinel/original fields; forged content/source/version rejection; atomic rollback; release/ack/response retries; citizen history; unchanged original and submitted status. Private browser fixtures retained in ignored .cache.');
-}catch(error){console.error('WORKFLOW_CONNECTED_FAILED at '+stage, error instanceof assert.AssertionError?error.message:'Private connection/command failure');process.exitCode=1;}finally{await pool.end();await audit.end();}
+ console.log('WORKFLOW_CONNECTED_PASSED: six distinct managed identities; assigned reviewer; pre-release and unrelated denials; office projection excludes private sentinel/original fields; forged content/source/version rejection; atomic rollback; release/ack/response retries; independent backend workflow command race with observed blocking, equal IDs, one retained release, conflict and rollback; citizen history; unchanged original and submitted status. Private browser fixtures retained in ignored .cache.');
+}catch(error){console.error('WORKFLOW_CONNECTED_FAILED at '+stage, error instanceof assert.AssertionError?error.message:'Private connection/command failure');process.exitCode=1;}finally{await pool.end();await racePool.end();await audit.end();}

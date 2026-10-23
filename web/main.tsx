@@ -4,31 +4,278 @@ import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from 'reac
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { complaintSchema, type CaseRecord } from '../domain/complaint';
 import './style.css';
-type Config={ready:boolean;url?:string;publishableKey?:string};
-let auth:SupabaseClient|undefined;
-async function api(path:string,init:RequestInit={}){
-  const session=await auth?.auth.getSession();
-  const response=await fetch(`/api${path}`,{...init,headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.data.session?.access_token??''}`,...init.headers}});
-  const body=await response.json();if(!response.ok)throw new Error(body.error??'Request failed.');return body;
+
+type Config = { ready: boolean; url?: string; publishableKey?: string };
+type Concern = { type: 'service' | 'conduct' | 'mixed'; wording: string };
+let auth: SupabaseClient | undefined;
+
+async function api(path: string, init: RequestInit = {}) {
+  const session = await auth?.auth.getSession();
+  const response = await fetch(`/api${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.data.session?.access_token ?? ''}`,
+      ...init.headers,
+    },
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error ?? 'The request could not be completed.');
+  return body;
 }
-function App(){
-  const [config,setConfig]=useState<Config>();const [signedIn,setSignedIn]=useState(false);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
-  useEffect(()=>{let active=true;fetch('/api/config').then(r=>r.json()).then(async c=>{if(!active)return;setConfig(c);if(c.ready){auth=createClient(c.url,c.publishableKey);const {data}=await auth.auth.getSession();if(active)setSignedIn(!!data.session);}}).catch(()=>setError('Cannot reach the server. Please retry.'));return()=>{active=false;};},[]);
-  async function signIn(){setBusy(true);setError('');try{const {error}=await auth!.auth.signInAnonymously();if(error)throw error;setSignedIn(true);}catch{setError('Managed sign-in is unavailable. Check that anonymous sign-in is enabled for the dedicated project.');}finally{setBusy(false);}}
-  return <><div className="demo-strip">FICTIONAL DEMONSTRATION <span>· No government filing · Written foundation</span></div><header><Link to="/" className="brand"><span className="brand-mark">ज</span><span>Janvaani<small>YOUR VOICE, PRESERVED.</small></span></Link><nav><Link to="/">Your workspace</Link><a href="#privacy">Privacy</a><span className="phase">01 / FOUNDATION</span></nav></header><main><Routes><Route path="/" element={<><section className="intro"><p className="eyebrow">CITIZEN ACCOUNTABILITY / SAMPLE MUNICIPAL DESK</p><h1>A clear record.<br/><em>A place to begin.</em></h1><p>Write what happened, name each concern, and keep a private receipt. Your service request and conduct concerns stay distinct.</p><div className="steps"><span className="active">01 Write</span><span>02 Confirm concerns</span><span>03 Keep receipt</span></div></section>{!config?<p role="status">Connecting to your workspace…</p>:!config.ready?<section className="notice"><p className="eyebrow">SETUP NEEDED</p><h2>Your private workspace is not connected yet.</h2><p>A dedicated Supabase project must be configured before sign-in or submission. No complaint has been saved.</p><p>The form below is available to explore; submission becomes available after managed authentication is configured.</p></section>:!signedIn?<section className="notice"><h2>Start a fictional citizen session</h2><p>A managed anonymous account keeps this browser’s cases together. Losing this browser session can lose access; identity recovery is outside this slice.</p><button onClick={signIn} disabled={busy}>{busy?'Connecting…':'Start citizen session →'}</button></section>:<p className="session" role="status">● Managed citizen session active</p>}{error&&<p className="error" role="alert">{error}</p>}<ComplaintForm enabled={signedIn&&!!config?.ready}/></>}/><Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn}/>}/><Route path="*" element={<section className="notice"><h1>Page not found</h1><Link to="/">Return to your workspace</Link></section>}/></Routes><section id="privacy" className="privacy"><h2>Your account. Your private record.</h2><p>Use invented names and fictional incidents only. This slice provides private citizen submission and readback. Office review, evidence uploads, escalation, appeal, legal assistance and full record verification come in later tasks.</p><p>If you are in immediate danger, seek appropriate local emergency help. This demonstration does not provide emergency response.</p></section></main><footer><span>JANVAANI / HACKCACHE 2026</span><span>Fictional people. Human decisions. Clear limits.</span></footer></>;
+
+function App() {
+  const [config, setConfig] = useState<Config>();
+  const [signedIn, setSignedIn] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [configRetry, setConfigRetry] = useState(0);
+
+  function retryConfig() {
+    setError('');
+    setConfig(undefined);
+    setSignedIn(false);
+    setConfigRetry((attempt) => attempt + 1);
+  }
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch('/api/config');
+        if (!response.ok) throw new Error('Configuration request failed.');
+        const value = await response.json() as Config;
+        if (!active) return;
+        setConfig(value);
+        if (value.ready && value.url && value.publishableKey) {
+          auth = createClient(value.url, value.publishableKey);
+          const { data } = await auth.auth.getSession();
+          if (active) setSignedIn(!!data.session);
+        }
+      } catch {
+        if (active) setError('The demo service could not be reached. Check your connection, then try again.');
+      }
+    })();
+    return () => { active = false; };
+  }, [configRetry]);
+
+  async function signIn() {
+    setBusy(true);
+    setError('');
+    try {
+      const { error: signInError } = await auth!.auth.signInAnonymously();
+      if (signInError) throw signInError;
+      setSignedIn(true);
+    } catch {
+      setError('A demo session could not be started. Please try again later.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <>
+    <div className="demo-strip">Hackathon demo <span>· Fictional data only · No government submission</span></div>
+    <header className="site-header">
+      <Link to="/" className="brand" aria-label="Janvaani home"><span className="brand-mark" aria-hidden="true">ज</span><span>Janvaani</span></Link>
+      <nav aria-label="Main navigation"><Link to="/">Your workspace</Link><a href="#privacy">Privacy</a></nav>
+    </header>
+    <main>
+      <Routes>
+        <Route path="/" element={<>
+          <div className="page-heading">
+            <p className="sample-label">Fictional Municipal Service Desk</p>
+            <h1>File a complaint</h1>
+            <p>Describe what happened and list the issues you want addressed.</p>
+          </div>
+          {!config ? error ? <section className="notice" role="alert"><h2>Demo service unavailable</h2><p>{error}</p><button type="button" onClick={retryConfig}>Try again</button></section> : <p className="live-message" role="status">Connecting to the demo service…</p>
+            : !config.ready ? <section className="notice" role="status" aria-labelledby="setup-title">
+              <h2 id="setup-title">Submission is temporarily unavailable</h2>
+              <p>This demo is not connected yet. Your entries will not be saved until submission is available.</p>
+              <button type="button" onClick={retryConfig}>Try again</button>
+            </section>
+              : !signedIn ? <section className="session-notice" aria-labelledby="session-title">
+                <div><h2 id="session-title">Start a demo session</h2><p>Access to a saved receipt depends on keeping this browser session. Recovery is unavailable in this demo.</p></div>
+                <button type="button" onClick={signIn} disabled={busy}>{busy ? 'Starting session…' : 'Start demo session'}</button>
+              </section>
+                : <p className="session" role="status">Demo session active. Your entries are not saved until you submit.</p>}
+          {error && config && <p className="error" role="alert">{error}</p>}
+          <ComplaintForm enabled={signedIn && !!config?.ready} />
+        </>} />
+        <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} />} />
+        <Route path="*" element={<section className="notice"><h1>Page not found</h1><Link to="/">Return to your workspace</Link></section>} />
+      </Routes>
+      <section id="privacy" className="privacy" aria-labelledby="privacy-title">
+        <h2 id="privacy-title">Using this demo</h2>
+        <p>Use fictional details only. Submitting creates a private demo receipt and does not contact a government office. Do not enter real personal or sensitive information.</p>
+      </section>
+    </main>
+    <footer><span>Janvaani · Hack Cache</span><span>Fictional data only</span></footer>
+  </>;
 }
-function ComplaintForm({enabled}:{enabled:boolean}){
-  const navigate=useNavigate();const [narrative,setNarrative]=useState('');const [concerns,setConcerns]=useState([{type:'service',wording:''},{type:'conduct',wording:''}]);const [declaration,setDeclaration]=useState(false);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [key,setKey]=useState(()=>crypto.randomUUID());const [attempt,setAttempt]=useState(false);
-  const payload={narrative,office:'SAMPLE_MUNICIPAL_DESK',category:'SAMPLE_MUNICIPAL_SERVICE',concerns,declaration};
-  const changed=()=>{if(attempt){setKey(crypto.randomUUID());setAttempt(false);}};
-  async function submit(event:React.FormEvent){event.preventDefault();setError('');const parsed=complaintSchema.safeParse(payload);if(!parsed.success){setError('Add the narrative, fill every concern, and confirm the declaration.');return;}setBusy(true);setAttempt(true);try{const receipt=await api('/complaints',{method:'POST',headers:{'Idempotency-Key':key},body:JSON.stringify(parsed.data)});navigate(`/cases/${receipt.id}`);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  return <form onSubmit={submit} className="form-grid"><div className="form-main"><section className="card"><div className="section-title"><span className="number">01</span><div><h2>Tell your story</h2><p>A written account is enough to start.</p></div></div><div className="sample-office"><span>SAMPLE OFFICE</span><strong>Fictional Municipal Service Desk</strong><small>Sample municipal service · Demonstration jurisdiction</small></div><label htmlFor="narrative">What happened?</label><p className="hint" id="narrative-help">Include what happened, where and when, and the response you need. Avoid real personal details.</p><textarea id="narrative" aria-describedby="narrative-help" maxLength={12000} rows={7} value={narrative} onChange={e=>{changed();setNarrative(e.target.value);}} placeholder="For example: I visited the fictional permit desk on sample day 4…" required disabled={busy}/><div className="counter">{narrative.length.toLocaleString()} / 12,000 characters</div></section><section className="card"><div className="section-title"><span className="number">02</span><div><h2>Confirm each concern</h2><p>Manual entry · No AI extraction is used.</p></div></div>{concerns.map((concern,i)=><div className="concern" key={i}><div className="concern-heading"><label htmlFor={`concern-${i}`}>Concern {String(i+1).padStart(2,'0')}</label><select aria-label={`Type for concern ${i+1}`} value={concern.type} disabled={busy} onChange={e=>{changed();setConcerns(concerns.map((c,n)=>n===i?{...c,type:e.target.value}:c));}}><option value="service">Service request</option><option value="conduct">Conduct allegation</option><option value="mixed">Mixed concern</option></select></div><textarea id={`concern-${i}`} rows={2} maxLength={2000} value={concern.wording} disabled={busy} onChange={e=>{changed();setConcerns(concerns.map((c,n)=>n===i?{...c,wording:e.target.value}:c));}} required placeholder="Keep the original wording of the issue you want reviewed."/>{concerns.length>1&&<button type="button" className="text-button" disabled={busy} onClick={()=>{changed();setConcerns(concerns.filter((_,n)=>n!==i));}}>Remove concern {i+1}</button>}</div>)}<button className="secondary" type="button" disabled={busy||concerns.length>=30} onClick={()=>{changed();setConcerns([...concerns,{type:'service',wording:''}]);}}>+ Add another concern</button><p className="hint">Up to 30 manual concerns. Include every material issue; conduct is reviewed separately from service outcome.</p></section></div><aside><div className="card review"><p className="eyebrow">03 / YOUR RECEIPT</p><h2>A record you can return to.</h2><ul><li>A unique complaint ID</li><li>Server submission time</li><li>Your narrative and concerns</li><li>A private persisted case page</li></ul><div className="divider"/><label className="checkbox"><input type="checkbox" checked={declaration} disabled={busy} onChange={e=>{changed();setDeclaration(e.target.checked);}}/><span>This is fictional demonstration data. I have reviewed every concern and the account is accurate to the best of my knowledge within the sample.</span></label>{error&&<p role="alert" className="error">{error}</p>}<button type="submit" disabled={!enabled||busy}>{busy?'Saving your complaint…':'Submit & get receipt →'}</button>{!enabled&&<p className="hint">Submission requires a configured managed citizen session.</p>}<p className="hint">Submitting here does not contact a government office.</p></div></aside></form>;
+
+const typeHelp: Record<Concern['type'], string> = {
+  service: 'A request about a service, decision, delay or missing information.',
+  conduct: 'A concern about someone’s conduct. Describe it as an allegation or request for review.',
+  mixed: 'Use this when the service issue and conduct concern belong together.',
+};
+
+function ComplaintForm({ enabled }: { enabled: boolean }) {
+  const navigate = useNavigate();
+  const [narrative, setNarrative] = useState('');
+  const [concerns, setConcerns] = useState<Concern[]>([
+    { type: 'service', wording: '' },
+    { type: 'conduct', wording: '' },
+  ]);
+  const [declaration, setDeclaration] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [key, setKey] = useState(() => crypto.randomUUID());
+  const [attempt, setAttempt] = useState(false);
+  const payload = { narrative, office: 'SAMPLE_MUNICIPAL_DESK', category: 'SAMPLE_MUNICIPAL_SERVICE', concerns, declaration };
+
+  function changed(field?: string) {
+    setError('');
+    if (attempt) {
+      setKey(crypto.randomUUID());
+      setAttempt(false);
+    }
+    if (field && fieldErrors[field]) {
+      setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; });
+    }
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    const parsed = complaintSchema.safeParse(payload);
+    if (!parsed.success) {
+      const next: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        if (issue.path[0] === 'narrative') next.narrative = 'Add an account of what happened.';
+        if (issue.path[0] === 'concerns' && typeof issue.path[1] === 'number') {
+          next[`concern-${issue.path[1]}`] = 'Add the wording for this concern.';
+        }
+        if (issue.path[0] === 'declaration') next.declaration = 'Confirm the fictional-data declaration before submitting.';
+      }
+      setFieldErrors(next);
+      setError('Review the highlighted fields before submitting.');
+      return;
+    }
+    setFieldErrors({});
+    setBusy(true);
+    setAttempt(true);
+    try {
+      const receipt = await api('/complaints', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': key },
+        body: JSON.stringify(parsed.data),
+      });
+      navigate(`/cases/${receipt.id}`);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div className="form-layout">
+    <form onSubmit={submit} className="form-surface" noValidate>
+      <section className="form-section" aria-labelledby="story-title">
+        <h2 id="story-title">What happened</h2>
+        <p className="section-intro">Write what happened, where and when, and what response you need. Use fictional details only.</p>
+        <label className="field-label" htmlFor="narrative">Your account</label>
+        <textarea id="narrative" aria-describedby={`narrative-help${fieldErrors.narrative ? ' narrative-error' : ''}`} aria-invalid={!!fieldErrors.narrative} maxLength={12000} rows={6} value={narrative} onChange={(event) => { changed('narrative'); setNarrative(event.target.value); }} placeholder="For example: I visited the fictional permit desk on sample day 4…" disabled={busy} />
+        <p className="field-help" id="narrative-help">Include the details needed to understand the event. Avoid real personal information.</p>
+        {fieldErrors.narrative && <p className="field-error" id="narrative-error">{fieldErrors.narrative}</p>}
+        <p className="counter" aria-live="polite">{narrative.length.toLocaleString()} / 12,000 characters</p>
+      </section>
+
+      <section className="form-section" aria-labelledby="concerns-title">
+        <h2 id="concerns-title">Issues to address</h2>
+        <p className="section-intro">List each issue separately so the saved record keeps your wording and order.</p>
+        {concerns.map((concern, index) => {
+          const field = `concern-${index}`;
+          return <fieldset className="concern" key={index}>
+            <legend>Concern {index + 1}</legend>
+            <label className="field-label" htmlFor={`${field}-type`}>Type</label>
+            <select id={`${field}-type`} aria-label={`Type for concern ${index + 1}`} value={concern.type} disabled={busy} onChange={(event) => { changed(); setConcerns((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, type: event.target.value as Concern['type'] } : item)); }}>
+              <option value="service">Service request</option><option value="conduct">Conduct concern</option><option value="mixed">Mixed concern</option>
+            </select>
+            <p className="field-help">{typeHelp[concern.type]}</p>
+            <label className="field-label" htmlFor={`${field}-wording`}>Your wording</label>
+            <textarea id={`${field}-wording`} aria-describedby={fieldErrors[field] ? `${field}-error` : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy} onChange={(event) => { changed(field); setConcerns((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, wording: event.target.value } : item)); }} placeholder="Describe the issue you want addressed." />
+            {fieldErrors[field] && <p className="field-error" id={`${field}-error`}>{fieldErrors[field]}</p>}
+            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy} onClick={() => { changed(); setConcerns((items) => items.filter((_, itemIndex) => itemIndex !== index)); }}>Remove concern {index + 1}</button>}</div>
+          </fieldset>;
+        })}
+        <button className="secondary-button" type="button" disabled={busy || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { type: 'service', wording: '' }]); }}>Add another concern</button>
+        <p className="field-help limit-note">Up to 30 concerns. Service requests concern an outcome or information; conduct concerns ask for review of behaviour.</p>
+      </section>
+
+      <section className="form-section submit-section" aria-labelledby="review-title">
+        <h2 id="review-title">Review and submit</h2>
+        <label className="declaration" htmlFor="declaration">
+          <input id="declaration" type="checkbox" checked={declaration} disabled={busy} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} />
+          <span>This is fictional demonstration data. I have reviewed the account and each concern.</span>
+        </label>
+        {fieldErrors.declaration && <p className="field-error" id="declaration-error">{fieldErrors.declaration}</p>}
+        {error && <p role="alert" className="error">{error}</p>}
+        <div className="submit-row">
+          <button type="submit" disabled={!enabled || busy}>{busy ? 'Saving complaint…' : 'Submit complaint'}</button>
+          {busy && <p className="live-message" role="status" aria-live="polite">Saving your complaint. Please wait.</p>}
+        </div>
+        {!enabled && <p className="field-help">Start a demo session to enable submission. Your entries have not been saved.</p>}
+        <p className="field-help">Submitting creates a private demo receipt. It does not contact a government office.</p>
+      </section>
+    </form>
+    <aside className="help-column" aria-label="Writing guidance">
+      <section className="help-block"><h2>Writing guidance</h2><p>Keep the account in your own words. Separate issues when they need different responses.</p><ul><li>Use dates or places only if they are fictional.</li><li>Do not include real names or contact details.</li><li>Submitting does not send this to an office.</li></ul></section>
+      <section className="help-block"><h2>Before you leave</h2><p>Entries are not saved as a draft. After submission, access to your receipt depends on this browser session. Recovery is unavailable in the demo.</p></section>
+    </aside>
+  </div>;
 }
-function CasePage({ready,signedIn}:{ready:boolean;signedIn:boolean}){
-  const {id}=useParams();const [record,setRecord]=useState<CaseRecord>();const [error,setError]=useState('');
-  useEffect(()=>{if(!ready||!signedIn)return;let active=true;api(`/complaints/${id}`).then(data=>{if(active)setRecord(data);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[id,ready,signedIn]);
-  if(!ready||!signedIn)return <section className="notice"><h1>Open your citizen session</h1><p>This private receipt requires the same managed account that submitted it.</p><Link to="/">Go to workspace</Link></section>;
-  if(error)return <p role="alert" className="error">{error}</p>;if(!record)return <p role="status">Retrieving your saved complaint…</p>;
-  return <article className="receipt"><p className="eyebrow">PRIVATE COMPLAINT RECEIPT</p><h1>Your account is<br/><em>on the record.</em></h1><span className="status">Submitted</span><dl><dt>Complaint ID</dt><dd>{record.id}</dd><dt>Server submission time</dt><dd>{new Date(record.submittedAt).toLocaleString()}</dd><dt>Sample office</dt><dd>Fictional Municipal Service Desk</dd></dl><section className="card"><h2>Your original account</h2><p className="preserve">{record.narrative}</p><h2>Confirmed concerns</h2>{record.concerns.map((c,i)=><div className="concern" key={i}><p className="eyebrow">{i+1} / {c.type}</p><p className="preserve">{c.wording}</p></div>)}</section><p>This foundation stores your submission. Routing, review deadlines and official responses are not implemented yet. No authority has been contacted.</p><button onClick={()=>window.print()}>Print / save receipt</button> <Link to="/">Start another fictional complaint</Link></article>;
+
+const concernTypeLabel: Record<Concern['type'], string> = {
+  service: 'Service request',
+  conduct: 'Conduct concern',
+  mixed: 'Mixed concern',
+};
+
+function CasePage({ ready, signedIn }: { ready: boolean; signedIn: boolean }) {
+  const { id } = useParams();
+  const [record, setRecord] = useState<CaseRecord>();
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!ready || !signedIn) return;
+    let active = true;
+    api(`/complaints/${id}`).then((value) => { if (active) setRecord(value); }).catch((caught) => { if (active) setError((caught as Error).message); });
+    return () => { active = false; };
+  }, [id, ready, signedIn]);
+
+  if (!ready || !signedIn) return <section className="notice"><h1>Open this receipt in your demo session</h1><p>This private receipt requires the browser session used to submit it. Recovery is unavailable in this demo.</p><Link to="/">Go to File a complaint</Link></section>;
+  if (error) return <section className="notice" role="alert"><h1>Receipt unavailable</h1><p>This receipt could not be found in your session.</p><Link to="/">Return to File a complaint</Link></section>;
+  if (!record) return <p className="live-message" role="status" aria-live="polite">Loading saved complaint…</p>;
+
+  return <article className="receipt" aria-labelledby="receipt-title">
+    <div className="receipt-heading"><p className="sample-label">Fictional Municipal Service Desk</p><h1 id="receipt-title">Complaint submitted</h1><span className="status">{record.status}</span></div>
+    <dl className="receipt-meta">
+      <div><dt>Complaint reference</dt><dd className="reference">{record.id}</dd></div>
+      <div><dt>Submitted</dt><dd><time dateTime={record.submittedAt}>{new Date(record.submittedAt).toLocaleString()}</time></dd></div>
+      <div><dt>Office</dt><dd>Fictional Municipal Service Desk</dd></div>
+    </dl>
+    <section className="saved-account" aria-labelledby="account-title">
+      <h2 id="account-title">Your original account</h2>
+      <p className="preserve">{record.narrative}</p>
+      <h2 className="concerns-heading">Issues recorded</h2>
+      <ol className="saved-concerns">{record.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}>
+        <div className="saved-concern-label"><span>Concern {index + 1}</span><span>{concernTypeLabel[concern.type]}</span></div>
+        <p className="preserve">{concern.wording}</p>
+      </li>)}</ol>
+    </section>
+    <p className="receipt-limit">This receipt confirms what was saved in the demo. No government office has received it.</p>
+    <div className="receipt-actions"><button type="button" onClick={() => window.print()}>Print or save receipt</button><Link className="secondary-link" to="/">Start another complaint</Link></div>
+  </article>;
 }
-createRoot(document.getElementById('root')!).render(<BrowserRouter><App/></BrowserRouter>);
+
+createRoot(document.getElementById('root')!).render(<BrowserRouter><App /></BrowserRouter>);

@@ -1,6 +1,20 @@
 # Task 01 handoff
 
-Current status: CONNECTED_SELF_CHECKS_PASSED / BROWSER_JOURNEY_PASSED / READY_FOR_OWNER_ACCEPTANCE. Self-check evidence is not independent acceptance.
+Current status: HC-P6-UI01 IMPLEMENTED / LOCAL_CHECKS_PASSED / BROWSER_JOURNEY_AND_RELOAD_PASSED / READY_FOR_SEPARATE_UI_REVIEW. Self-check evidence is not independent acceptance. HC-P6-T04 remains paused as directed.
+
+## Current handoff — HC-P6-UI01
+
+The citizen intake and receipt were redesigned in `web/main.tsx` and `web/style.css` using the requested compact civic layout, accessible field errors and announcements, and responsive receipt. Authentication, API contracts, validation limits, idempotent retry behavior, private receipt access, and stored-record behavior remain in place; no backend or database files were changed. Evidence, actual browser states, screenshots, local checks, and limitations are recorded in [ui01-evidence.md](ui01-evidence.md).
+
+Verification completed against the production build: 30 local tests passed, typecheck passed, build passed with the existing large-client-chunk warning. The real managed browser journey submitted fictional English/Hindi content with four concerns, showed saving status, displayed the receipt, then reloaded and matched the saved account and ordered concerns. Phone-width emulation reported no horizontal overflow. Setup-unavailable retry preserved entered text; an inaccessible reference showed a plain error and return action.
+
+Next owner: obtain separate UI/functional review. Keep HC-P6-T04 paused; do not begin Phase 2A under this handoff. No physical-phone acceptance, automated screen-reader audit, native print-dialog review, deployment, or production approval is claimed.
+
+### HC-P6-UI01 resource observations
+
+- Fresh baseline 2026-10-23 17:48:29 UTC / 23:18:29 IST: five-hour used 2%, weekly used 0%; resets 1792795495 / 1793382295.
+- First rendered milestone 17:51:10 UTC / 23:21:10 IST: five-hour used 2%, weekly used 0%.
+- Final handoff observation and publication identities are supplied in chat. Shared account counter changes are not isolated task cost. No paid/reset credits or model/speed changes were used.
 
 ## Completed connected foundation — final authorized run
 

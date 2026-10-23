@@ -10,6 +10,7 @@ import { createApp } from '../server/app.js';
 import { complaintSchema } from '../domain/complaint.js';
 import { firstSubmissionRace } from './first-submission-race.js';
 import { inspectPermissions,checkPrivateSchemaExposure } from './connected-permissions.js';
+import { checkPolicyBehavior } from './policy-behavior.js';
 const config=configuration();
 if(!config.ready||process.env.RUN_CONNECTED_CHECKS!=='true'||!process.env.MIGRATION_DATABASE_URL){console.log('CONNECTED_CHECKS_NOT_RUN: dedicated Supabase configuration, migration audit credentials and RUN_CONNECTED_CHECKS=true required. No fake identity/storage substitute used.');process.exitCode=2;}
 else {
@@ -17,7 +18,7 @@ else {
  const ref=process.env.SUPABASE_PROJECT_REF;
  const adminUser=decodeURIComponent(adminUrl.username);
  if(adminUser.startsWith('hc_runtime')||!(adminUrl.hostname===`db.${ref}.supabase.co`||(adminUrl.hostname.endsWith('.pooler.supabase.com')&&adminUser===`postgres.${ref}`))) throw new Error('Audit credentials must target the confirmed dedicated project and differ from runtime.');
- const connectionOptions={ssl:{rejectUnauthorized:true},connectionTimeoutMillis:5000,statement_timeout:10000};
+ const connectionOptions={ssl:{rejectUnauthorized:true},connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000};
  const pool=new pg.Pool({connectionString:config.databaseUrl,max:1,...connectionOptions});
  const racePool=new pg.Pool({connectionString:config.databaseUrl,max:2,...connectionOptions});
  const audit=new pg.Pool({connectionString:adminUrl.toString(),max:1,...connectionOptions});
@@ -35,12 +36,28 @@ else {
   const key=randomUUID();
   const submit=()=>request(app).post('/api/complaints').auth(ta,{type:'bearer'}).set('Idempotency-Key',key).send(payload);
   const created=await submit();assert.equal(created.status,201);const id=created.body.id;
-  const read=await request(app).get(`/api/complaints/${id}`).auth(ta,{type:'bearer'});assert.equal(read.status,200);assert.equal(read.body.narrative,payload.narrative);assert.equal(read.body.concerns.length,4);
+  const read=await request(app).get(`/api/complaints/${id}`).auth(ta,{type:'bearer'});assert.equal(read.status,200);assert.equal(read.body.narrative,payload.narrative);assert.deepEqual(read.body.concerns,payload.concerns);
   assert.equal((await request(app).get(`/api/complaints/${id}`).auth(tb,{type:'bearer'})).status,404);
   assert.equal((await request(app).get(`/api/complaints/${randomUUID()}`).auth(ta,{type:'bearer'})).status,404);
   assert.equal((await request(app).get(`/api/complaints/${id}`)).status,401);
   assert.equal((await request(app).get(`/api/complaints/${id}`).auth('forged-token',{type:'bearer'})).status,401);
   assert.equal((await request(app).post('/api/complaints').auth(ta,{type:'bearer'}).set('Idempotency-Key',randomUUID()).send({...payload,workspace:randomUUID()})).status,400);
+  for(const field of ['actor','actor_id','role','userId']) assert.equal((await request(app).post('/api/complaints').auth(ta,{type:'bearer'}).set('Idempotency-Key',randomUUID()).send({...payload,[field]:randomUUID()})).status,400);
+  stage='row-security behavior under non-owner writer';
+  await checkPolicyBehavior(audit,actor,sb.data.user!.id,complaintSchema.parse(payload));
+  stage='runtime commands with mismatched membership context';
+  const workspaceA=await transaction(pool,actor,async(_client,workspace)=>workspace);
+  await transaction(pool,sb.data.user!.id,async client=>{
+    await client.query("SELECT set_config('app.workspace_id',$1,true)",[workspaceA]);
+    for(const [sql,values] of [
+      ['SELECT hc_private.read_complaint($1::uuid)',[id]],
+      ['SELECT hc_private.submit_complaint($1::uuid,$2::jsonb)',[randomUUID(),JSON.stringify(payload)]],
+    ] as [string,string[]][]){
+      await client.query('SAVEPOINT command_denial');
+      try {await assert.rejects(client.query(sql,values),(error:unknown)=>(error as {code:string}).code==='42501');}
+      finally {await client.query('ROLLBACK TO SAVEPOINT command_denial');}
+    }
+  });
   // Sequential retries test existing-receipt idempotency, not concurrency.
   for(let retry=0;retry<2;retry++){const d=await submit();assert.equal(d.status,201);assert.equal(d.body.id,id);}
   assert.equal((await request(app).post('/api/complaints').auth(ta,{type:'bearer'}).set('Idempotency-Key',key).send({...payload,narrative:'Changed content'})).status,409);

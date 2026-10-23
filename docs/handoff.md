@@ -2,7 +2,17 @@
 
 Current status: LOCAL_FOUNDATION_VERIFIED / GITHUB_PUBLISHED / CONNECTED_VERIFICATION_PENDING.
 
-## HC-P6-T02 latest handoff
+## HC-P6-T03 latest handoff
+
+Local checker corrections are complete: reliable bounded two-client cleanup/disposal and error preservation; expected policy relationships and actor/workspace token contracts instead of nonempty-expression checks; direct non-owner RLS harness and separate runtime-command negatives. Full suite: 27 local tests passed; typecheck/build passed. These are self-checks, not hosted PostgreSQL acceptance. See task-01-evidence.md for failure cases and evidence layers.
+
+Connected/browser acceptance remains NOT RUN. Initial missing local configuration was investigated through the browser rather than assumed to mean a missing project. The user signed in to Supabase; the authenticated account had no organizations. A dedicated HackCache organization was created on Free. The open new-project form is prepared as hackcache-accountability with automatic table exposure off. A regional incident warning is visible; no failed creation is claimed.
+
+**Exact next user action:** in the open Supabase project form, choose the database password privately and submit Create new project, then confirm readiness. This credential-entry step is left to the user. Do not paste the password or database URL in chat. Until creation completes there is no confirmed project reference/configuration to use. After it completes, the integrator can inspect public project settings and prepare ignored `.env`; any needed database credential must be entered locally/private, never tracked or logged. No unrelated cloud project was used.
+
+Phase 1 cannot yet be accepted: the hosted migration, real A/B persistence/isolation, independent first-submission race, runtime permissions/RLS, context cleanup, private-schema exposure and real browser receipt/reload still need execution. No later features started. The task's final publication/resource checkpoint will be recorded after push.
+
+## Historical HC-P6-T02 handoff
 
 Corrected transport size to 512 KiB with an explicit 438,474-byte conservative compact-JSON bound, retaining raw field limits before trimming. Added Hindi, natural escaping, fully escaped key/value, invalid-field and excessive-body regressions. Baseline reproduction: three valid-payload tests failed with HTTP 413. After correction: 16 local tests passed; typecheck and production build passed.
 
@@ -31,7 +41,7 @@ A new dedicated hackathon Supabase project; anonymous Auth enabled; project URL/
 Finish Task 01 connected verification first: apply migration, inspect real role/RLS/grants, run separate-identity persistence/denial, idempotency/atomicity/context checks, then browser written entry → four concerns → receipt → reload. Correct observed failures within this slice. Only then advance to reviewer-approved office projections and the incomplete-response loop; AI, uploads and escalation remain deferred.
 
 ## Evidence and limits
-See task-01-evidence.md for actual commands, initial typecheck failure/correction and skips. Sixteen local tests now pass (Task 01 had eleven); connected checks remain NOT RUN. Full hash-chain verification is NOT IMPLEMENTED. Browser-managed anonymous sessions do not establish institutional identity or guarantee cross-device recovery. Self-checks are not independent acceptance.
+See task-01-evidence.md for actual commands, corrections and skips. Twenty-seven local tests now pass (Task 01 had eleven, Task 02 sixteen); connected checks remain NOT RUN. Full hash-chain verification is NOT IMPLEMENTED. Browser-managed anonymous sessions do not establish institutional identity or guarantee cross-device recovery. Self-checks are not independent acceptance.
 
 Pre-window development was explicitly requested by the owner and is disclosed in README. Requested model GPT-6.1 Sol / High / Standard; observed backend settings UNKNOWN.
 

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import type pg from 'pg';
+import { assertPolicyContract, type PolicyDefinition } from './policy-contract.js';
 
 const dataTables = ['workspaces', 'memberships', 'cases', 'originals', 'concerns', 'events'];
 
@@ -22,12 +23,9 @@ export async function inspectPermissions(runtime: pg.Pool, audit: pg.Pool) {
   for (const table of tables.rows) {
     assert.equal(table.owner, 'hc_owner'); assert.equal(table.relrowsecurity, true); assert.equal(table.relforcerowsecurity, true);
   }
-  const policies = await audit.query(`SELECT tablename,policyname,roles,cmd,qual,with_check FROM pg_policies
+  const policies = await audit.query<PolicyDefinition>(`SELECT tablename,policyname,roles,cmd,permissive,qual,with_check FROM pg_policies
     WHERE schemaname='hc_private' AND tablename=ANY($1::text[]) ORDER BY tablename,policyname`, [dataTables]);
-  assert.equal(policies.rowCount, dataTables.length);
-  for (const policy of policies.rows) {
-    assert.deepEqual(policy.roles, ['hc_writer']); assert.equal(policy.cmd, 'ALL'); assert.ok(policy.qual); assert.ok(policy.with_check);
-  }
+  assertPolicyContract(policies.rows);
   const functions = await audit.query(`SELECT p.proname,r.rolname AS owner,p.prosecdef,p.proconfig,
     has_function_privilege('hc_runtime',p.oid,'EXECUTE') AS runtime_execute,
     has_function_privilege('anon',p.oid,'EXECUTE') AS anon_execute,

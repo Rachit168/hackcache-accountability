@@ -1,6 +1,45 @@
 # HC-P6-T01 — factual evidence
 
-## Latest: HC-P6-T02 bounded correction
+## Latest: HC-P6-T03 checker corrections and actual setup investigation
+
+### Source inspection
+- Started from clean reviewed HEAD `bbab1f9c4fdbe903661c31ad5a3e6a4291088bb8`; no new applicable AGENTS.md. All writes/caches/screenshots remain under the repository root.
+- Confirmed the sequential race cleanup could skip B when A rollback threw, and could release a failed connection as reusable.
+- Confirmed policy inspection required only nonempty expressions and would accept `true`.
+
+### Local dependency checks — executed
+- `withRaceClients` now owns acquisition/cleanup. Every acquired connection gets a cleanup attempt; A is attempted first to release B's wait. A cleanup exception cannot skip B. Rollback/pending-query cleanup is bounded to 10 seconds per connection; failed/uncertain cleanup discards the connection. Pending promises have rejection observers immediately. Original failures are preserved or combined with cleanup errors. Success logging occurs only after cleanup succeeds.
+- Seven controlled local cleanup tests passed: ordinary success/release; original check failure; A rollback failure with B still cleaned; B rollback failure/disposal; unresolved pending query timeout; rejected pending query; A rollback hang with B still cleaned. These do not establish PostgreSQL behavior and do not rely on pool shutdown to detect leakage.
+- Policy checker now requires exactly the six expected table/policy/role/command/permissive relationships and expected actor/workspace expressions for BOTH USING and WITH CHECK. Fail-closed token comparison ignores whitespace, parentheses, literal text casts and supported built-in qualification, without removing predicates/operators. It is a narrow checker for this migration, not a general SQL equivalence engine.
+- Four local policy tests passed, including rejection of `true` on either expression of every policy, `OR true`, actor/workspace substitutions and wrong/extra policy relationships.
+- Full local suite: **27 tests passed across four files**. Typecheck passed. Production build passed, retaining the existing 564.41 kB client chunk warning (gzip 162.94 kB). After the final checker-fixture/role-mode assertion refinement, targeted policy tests and typecheck passed again. No runtime feature was added.
+
+### Connected source prepared — NOT RUN
+- API tests use real managed A/B identities when configured, now compare the full concerns array and reject additional forged identity fields.
+- Runtime-command negatives use hc_runtime, mismatched actor/workspace context and savepoints; read/submit must return SQLSTATE 42501. This is separate from direct-table privilege probes.
+- A new policy-specific harness starts an isolated transaction through migration credentials, then SET LOCAL ROLE hc_writer. It verifies current role, no table ownership, no superuser/BYPASSRLS and row_security=on before data probes. It tests six actor/workspace combinations through direct SELECT on the four case tables, actor-only restrictions on bootstrap tables, and rejected INSERT on all six tables. All harness fixtures roll back; no policy/grant is weakened or replaced.
+- Administrative catalog/count reads are audit observations, not restricted-runtime evidence. Direct hc_writer probes exercise RLS itself; runtime command probes exercise membership/command checks; authenticated HTTP checks exercise the API. All remain NOT RUN against hosted PostgreSQL.
+- `npm run integration-check` returned **exit 2 / CONNECTED_CHECKS_NOT_RUN**. No hosted migration, real identity/persistence/race/RLS acceptance or browser receipt/reload was executed. No complete Phase 1 acceptance claimed.
+
+### Actual setup/browser observations
+- No Supabase tool is available. Local presence inspection (after correcting an ESM-only diagnostic command) found no .env and no required configuration variables; no secret values were printed.
+- Existing Brave session initially redirected Supabase to sign-in. The user completed sign-in/authorization themselves. The authenticated dashboard then displayed **no organizations**, so no existing dedicated project was available in that account.
+- Created a dedicated **HackCache** organization on the form's selected **Free ($0/month)** plan. Verified navigation to its new-project form. No paid plan/billing activation, account-security setting change or terms acceptance was performed by the agent.
+- Prepared project name `hackcache-accountability`, disabled automatic exposure of new tables in the form, and left password entry/project submission to the user. The page displays an incident warning that may affect project creation in the selected Asia-Pacific region. No project creation failure is inferred from that warning.
+- Exact current prerequisite: the user must choose the database password privately on that project form and create/confirm the dedicated project. Project existence/reference, anonymous Auth and usable connection credentials cannot be established before that step. This is a missing project/private credential setup, not a failed connected test.
+- Screenshot of the prepared form is local-only under `qa/artifacts/task-03-project-setup.png`. No credentials were entered or captured. The browser tab is kept for the user handoff. The separate receipt/reload acceptance journey remains NOT RUN.
+
+Primary references for harness execution: [PostgreSQL RLS](https://www.postgresql.org/docs/current/ddl-rowsecurity.html), [SET ROLE](https://www.postgresql.org/docs/current/sql-set-role.html).
+
+### Task 03 resource observations
+- Start 2026-10-23 14:14:30 UTC / 19:44:30 IST: five-hour used 28%, weekly 12%.
+- First verified correction checkpoint 14:18:56 UTC / 19:48:56 IST: five-hour 31%, weekly 13%.
+- Setup checkpoint 14:25:47 UTC / 19:55:47 IST: five-hour 36%, weekly 14%.
+- Bucket codex; reset identifiers 1792777498 / 1793304810 unchanged. The observed +8 pp is shared-account usage, not isolated task cost. No paid/reset credits or model/speed changes. Final publication/checkpoint details follow in handoff.
+
+The Task 02 and Task 01 sections below are retained historical evidence.
+
+## Historical: HC-P6-T02 bounded correction
 
 Task 02 baseline: clean `main` at reviewed commit `557d872d6644e13eecd316f5466d023f42b12f27`; no new applicable AGENTS.md found. All writes remain in `D:\project\Hack Cache`.
 

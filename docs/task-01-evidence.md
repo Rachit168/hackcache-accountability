@@ -2,6 +2,14 @@
 
 ## Latest: HC-P6-T03 checker corrections and actual setup investigation
 
+### Follow-up: project now verified, original resource stop reached
+
+After the user reported creation, live browser headings/title confirmed `hackcache-accountability | HackCache | Supabase`; the project URL identified reference `vhfjobnvbbwfvdhwhxgb`. This resolves missing account access/project existence. A safe link inspection showed the dashboard's migration summary as No migrations; the agent did not apply any migration. No credential fields were inspected.
+
+Presence-only local check still found no .env, all eight configuration variables absent and configuration ready=false. Anonymous Auth settings, usable connection credentials and hosted application behavior are not yet verified.
+
+Fresh observation 2026-10-23 14:33:48 UTC / 20:03:48 IST: five-hour USED 40%, weekly 14%; same reset identifiers 1792777498 / 1793304810. The +12 pp change from Task 03's original 28% baseline meets its stop threshold (shared-account change, not isolated task cost). No new implementation, migration or connected acceptance began; project confirmation and checkpoint finalisation only. An explicit new bounded-run decision was requested rather than silently resetting the task baseline. Phase 1 remains unaccepted.
+
 ### Source inspection
 - Started from clean reviewed HEAD `bbab1f9c4fdbe903661c31ad5a3e6a4291088bb8`; no new applicable AGENTS.md. All writes/caches/screenshots remain under the repository root.
 - Confirmed the sequential race cleanup could skip B when A rollback threw, and could release a failed connection as reusable.

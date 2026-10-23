@@ -3,11 +3,12 @@ import path from 'node:path';
 import { complaintSchema, uuidSchema } from '../domain/complaint.js';
 import type { configuration } from './config.js';
 import type { caseStore } from './database.js';
+import { complaintRequestLimitBytes } from './request-limits.js';
 type Dependencies={config:ReturnType<typeof configuration>; store?:ReturnType<typeof caseStore>; verify?:(token:string)=>Promise<string|null>};
 export function createApp({config,store,verify}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
   app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"});next();});
-  app.use(express.json({limit:'128kb'}));
+  app.use(express.json({limit:complaintRequestLimitBytes}));
   app.get('/api/health',(_req,res)=>res.json({status:'ok',configured:config.ready,stage:'task-01-foundation'}));
   app.get('/api/config',(_req,res)=>res.json(config.ready?{ready:true,url:config.url,publishableKey:config.key}:{ready:false,message:'Dedicated Supabase configuration is needed. No complaint can be submitted yet.'}));
   app.use('/api',async(req,res,next)=>{

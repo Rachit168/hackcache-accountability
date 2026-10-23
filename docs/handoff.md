@@ -1,6 +1,16 @@
-# Task 01 handoff
+# HC-P6 current handoff
 
-Current status: HC-P6-UI01 IMPLEMENTED / LOCAL_CHECKS_PASSED / BROWSER_JOURNEY_AND_RELOAD_PASSED / READY_FOR_SEPARATE_UI_REVIEW. Self-check evidence is not independent acceptance. HC-P6-T04 remains paused as directed.
+Current status: HC-P6-UI02 IMPLEMENTED / LOCAL_CHECKS_PASSED / BILINGUAL_BROWSER_JOURNEY_AND_RECEIPT_RELOAD_PASSED / READY_FOR_SEPARATE_UI_REVIEW. Self-check evidence is not independent acceptance. HC-P6-T04 / Phase 2A remains paused as directed.
+
+## Current handoff — HC-P6-UI02
+
+The visual restoration, English/Hindi interface, stable concern validation IDs, and distinct receipt failure/recovery states are implemented. The browser journey used fictional data and verified four concern readback, language preference persistence, unchanged user content and idempotency key, inaccessible/nonexistent receipt handling, transient retry, and print media styling. Details, limits, screenshots, and resource observations are in [ui02-evidence.md](ui02-evidence.md).
+
+Verification: 34 tests passed across seven files; typecheck and production build passed. The client bundle exceeds Vite's 500 kB advisory threshold. This remains a local implementation and self-check; separate review, physical-device testing, automated screen-reader audit, native print dialog, deployment, and production acceptance are not claimed.
+
+Next owner: review HC-P6-UI02 independently. Keep HC-P6-T04 paused unless the user explicitly resumes it. The prior UI01 evidence and foundation history remain below.
+
+## Historical handoff — HC-P6-UI01
 
 ## Current handoff — HC-P6-UI01
 

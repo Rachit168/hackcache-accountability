@@ -38,4 +38,4 @@ The screenshots in ignored `qa/artifacts/` were captured from the local browser.
 This was a local browser/dev-server verification, not physical-phone, automated screen-reader, or production deployment acceptance. HC-P6-T04 remains paused. No unrelated database audit was run.
 
 - Fresh HC-P6-UI02 baseline, 2026-10-23 18:21:09 UTC / 23:51:09 IST: primary five-hour used 12%, weekly used 2%; resets 1792795495 / 1793382295.
-- First implementation checks passed at about 18:24 UTC; final handoff observation: 2026-10-23 18:35:01 UTC / 00:05:01 IST on 2026-10-24: primary used 15%, weekly used 2% (shared account counter, not task-attributed). No paid/reset credits or model/speed changes were used.
+- First implementation checks passed at about 18:24 UTC; final handoff observation: 2026-10-23 18:38:44 UTC / 00:08:44 IST on 2026-10-24: primary used 16%, weekly used 3% (shared account counter, not task-attributed). No paid/reset credits or model/speed changes were used.

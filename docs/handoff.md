@@ -18,6 +18,8 @@ The user confirmed the password was saved again. Before retrying migration, the 
 
 Exact next work after authorization: run setup:database using the privately saved staging password, migrate the confirmed project, execute connected checks, repair observed foundation failures, then complete real browser receipt/reload. Anonymous Auth is now verified enabled; project creation is complete. Phase 1 remains unaccepted.
 
+Renewed-run correction publication: `ce1c161444b87676897efc02af55d45490dfc890`, pushed to existing main; local HEAD and git ls-remote main matched. Nine staged files reviewed; no credentials, generated paths or publishable-key patterns found. Ignored .env was explicitly excluded. This publication-note commit follows the verified source commit; final HEAD is reported in chat.
+
 ### Project-created continuation checkpoint
 
 The user reported creation, and the live dashboard confirmed project **hackcache-accountability** in organization **HackCache**, project reference `vhfjobnvbbwfvdhwhxgb`. Missing dashboard access and missing project are resolved. Local configuration is still absent: no .env, configuration ready=false, all required variables absent. No migration or connected/browser acceptance was attempted during this continuation. Auth provider settings and database credentials remain unverified; no password/key was read or printed.

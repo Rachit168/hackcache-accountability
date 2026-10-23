@@ -15,6 +15,8 @@ Fresh run explicitly authorized by the owner. Start 2026-10-23 14:35:25 UTC / 20
 
 Checkpoint 14:40:33 UTC / 20:10:33 IST was five-hour 48%, weekly 16%. Shared counters do not isolate task cost. No paid/reset credits or model/speed changes. Final documentation/publication followed the stop checkpoint.
 
+Encoding/setup correction published as `ce1c161444b87676897efc02af55d45490dfc890`; local and remote main verified equal. Nine staged files passed path/credential-pattern checks; ignored .env excluded. A subsequent docs-only commit records this publication; its final identity is in chat.
+
 ### Follow-up: project now verified, original resource stop reached
 
 After the user reported creation, live browser headings/title confirmed `hackcache-accountability | HackCache | Supabase`; the project URL identified reference `vhfjobnvbbwfvdhwhxgb`. This resolves missing account access/project existence. A safe link inspection showed the dashboard's migration summary as No migrations; the agent did not apply any migration. No credential fields were inspected.

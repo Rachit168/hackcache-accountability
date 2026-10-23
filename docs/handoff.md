@@ -10,7 +10,11 @@ Connected/browser acceptance remains NOT RUN. Initial missing local configuratio
 
 **Exact next user action:** in the open Supabase project form, choose the database password privately and submit Create new project, then confirm readiness. This credential-entry step is left to the user. Do not paste the password or database URL in chat. Until creation completes there is no confirmed project reference/configuration to use. After it completes, the integrator can inspect public project settings and prepare ignored `.env`; any needed database credential must be entered locally/private, never tracked or logged. No unrelated cloud project was used.
 
-Phase 1 cannot yet be accepted: the hosted migration, real A/B persistence/isolation, independent first-submission race, runtime permissions/RLS, context cleanup, private-schema exposure and real browser receipt/reload still need execution. No later features started. The task's final publication/resource checkpoint will be recorded after push.
+Phase 1 cannot yet be accepted: the hosted migration, real A/B persistence/isolation, independent first-submission race, runtime permissions/RLS, context cleanup, private-schema exposure and real browser receipt/reload still need execution. No later features started. No local checker failures remain in the executed tests; the hosted harness is unverified.
+
+Task 03 correction commit `58257dfcd7e5ec3100bd96aea126667040121532` was pushed to the existing public repository. Local HEAD and git ls-remote main matched; staged review covered ten files and found no forbidden paths or credential-pattern matches. This checkpoint update is a following docs-only commit, whose final identity is returned in chat.
+
+Pre-handoff observation: 2026-10-23 14:28:42 UTC / 19:58:42 IST, five-hour USED 39%, weekly USED 14%; unchanged reset identifiers 1792777498 / 1793304810. Observed interval from 14:14:30 UTC is 14m12s, shared five-hour change +11 pp, not isolated task cost. Evidence/publication finalisation followed; no new implementation started after this checkpoint. The last safe browser progress check still showed Create a new project; credential fields were not read. Creation/credential entry remains a user handoff.
 
 ## Historical HC-P6-T02 handoff
 

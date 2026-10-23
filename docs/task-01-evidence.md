@@ -36,6 +36,8 @@ Primary references for harness execution: [PostgreSQL RLS](https://www.postgresq
 - First verified correction checkpoint 14:18:56 UTC / 19:48:56 IST: five-hour 31%, weekly 13%.
 - Setup checkpoint 14:25:47 UTC / 19:55:47 IST: five-hour 36%, weekly 14%.
 - Bucket codex; reset identifiers 1792777498 / 1793304810 unchanged. The observed +8 pp is shared-account usage, not isolated task cost. No paid/reset credits or model/speed changes. Final publication/checkpoint details follow in handoff.
+- Pre-handoff 14:28:42 UTC / 19:58:42 IST: five-hour 39%, weekly 14%, same resets; start-to-observation 14m12s and +11 pp shared five-hour change. Final docs/publication work followed. No new implementation started after that checkpoint.
+- Pushed Task 03 correction `58257dfcd7e5ec3100bd96aea126667040121532`; local HEAD and remote main matched via git ls-remote. Ten staged files reviewed; no forbidden generated/secret paths or credential-pattern matches. Final documentation commit is a subsequent publication, reported in chat.
 
 The Task 02 and Task 01 sections below are retained historical evidence.
 

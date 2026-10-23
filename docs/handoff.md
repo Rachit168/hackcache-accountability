@@ -1,8 +1,16 @@
 # HC-P6 current handoff
 
-Current status: HC-P6-UI02 IMPLEMENTED / LOCAL_CHECKS_PASSED / BILINGUAL_BROWSER_JOURNEY_AND_RECEIPT_RELOAD_PASSED / READY_FOR_SEPARATE_UI_REVIEW. Self-check evidence is not independent acceptance. HC-P6-T04 / Phase 2A remains paused as directed.
+Current status: HC-P6-UI03 IMPLEMENTED / 42_LOCAL_TESTS_PASSED / TYPECHECK_AND_BUILD_PASSED / BILINGUAL_DESKTOP_AND_390PX_BROWSER_REVIEWED / FICTIONAL_RECEIPT_RELOAD_AND_COPY_PASSED / READY_TO_RETAIN. Same-identity refresh recovery is verified with controlled dependencies, not a live expired-token session. Browser-native leave-confirmation display was not independently observed. Self-check evidence is not independent acceptance. HC-P6-T04 / Phase 2A remains paused as directed.
 
-## Current handoff — HC-P6-UI02
+## Current handoff — HC-P6-UI03
+
+Preserved the UI02 ink/petrol and warm-paper design. The receipt 401 action now offers a bounded refresh of the current Supabase session and retries the original receipt only after the refreshed user ID matches. It never signs out or creates another anonymous identity in this path. Added a focused, translated error summary with links that focus the actual fields; a meaningful-unsent-entry beforeunload listener; phone-first section navigation order; exact-UUID copy with accessible feedback; and reduced-motion scrolling.
+
+Verification and limits are recorded in [ui03-evidence.md](ui03-evidence.md). All 42 tests passed across eight files; typecheck and production build passed. The browser run submitted a fictional record, switched its receipt between English and Hindi without changing the original text, reloaded it in the same session, and copied only the UUID. The client bundle is 588.59 kB minified (168.65 kB gzip), above Vite's 500 kB advisory. No database, schema, API payload, auth policy, dependency, or stored-record changes were made.
+
+The current UI is ready to retain when the owner resumes Phase 2A. HC-P6-T04 remains paused; this handoff does not resume it or claim acceptance of that phase. Physical-phone and screen-reader acceptance remain outstanding.
+
+## Historical handoff — HC-P6-UI02
 
 The visual restoration, English/Hindi interface, stable concern validation IDs, and distinct receipt failure/recovery states are implemented. The browser journey used fictional data and verified four concern readback, language preference persistence, unchanged user content and idempotency key, inaccessible/nonexistent receipt handling, transient retry, and print media styling. Details, limits, screenshots, and resource observations are in [ui02-evidence.md](ui02-evidence.md).
 

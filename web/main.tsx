@@ -1,16 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { complaintSchema, type CaseRecord } from '../domain/complaint';
 import { initialLanguage, translate, type CopyKey, type Language } from './i18n';
 import { receiptFailureState } from './receipt-state';
+import { createReceiptRecovery } from './receipt-recovery';
+import { attachLeaveWarning, copyExactReference, fieldErrorSummary, shouldWarnOnLeave } from './form-usability';
+import type { FormError } from './form-types';
 import './style.css';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
 type Concern = { uiId: string; type: ConcernType; wording: string };
-type FormError = 'narrativeError' | 'concernError' | 'declarationError';
 class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 type HotData = { auth?: SupabaseClient; root?: ReturnType<typeof createRoot> };
 const hotData = import.meta.hot?.data as HotData | undefined;
@@ -90,7 +92,7 @@ function App() {
           {error && config && <p className="error" role="alert">{t(error)}</p>}
           <ComplaintForm enabled={signedIn && !!config?.ready} language={language} t={t} />
         </>} />
-        <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} onAuthFailure={() => { void auth?.auth.signOut(); setSignedIn(false); }} />} />
+        <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
         <Route path="*" element={<section className="notice"><h1>{t('pageNotFound')}</h1><Link to="/">{t('returnWorkspace')}</Link></section>} />
       </Routes>
       <section id="privacy" className="privacy" aria-labelledby="privacy-title"><h2 id="privacy-title">{t('usingDemo')}</h2><p>{t('privacyBody')}</p></section>
@@ -116,12 +118,26 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [attempt, setAttempt] = useState(false);
+  const [summaryFocus, setSummaryFocus] = useState(0);
+  const summaryRef = useRef<HTMLElement>(null);
+  const submitted = useRef(false);
   const payload = { narrative, office: 'SAMPLE_MUNICIPAL_DESK', category: 'SAMPLE_MUNICIPAL_SERVICE', concerns: concerns.map(({ type, wording }) => ({ type, wording })), declaration };
   const locale = language === 'hi' ? 'hi-IN' : 'en-IN';
+  const summaryItems = fieldErrorSummary(fieldErrors, concerns);
+  const shouldWarn = shouldWarnOnLeave(narrative, concerns, declaration, submitted.current);
+  useEffect(() => {
+    if (!shouldWarn) return;
+    return attachLeaveWarning(window);
+  }, [shouldWarn]);
+  useEffect(() => { if (summaryFocus) summaryRef.current?.focus(); }, [summaryFocus]);
   function changed(field?: string) {
-    setError(undefined);
+    setError((current) => current === 'reviewFields' ? current : undefined);
     if (attempt) { setKey(crypto.randomUUID()); setAttempt(false); }
-    if (field && fieldErrors[field]) setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; });
+    if (field && fieldErrors[field]) {
+      const next = { ...fieldErrors }; delete next[field];
+      setFieldErrors(next);
+      if (Object.keys(next).length === 0) setError(undefined);
+    }
   }
   function updateConcern(uiId: string, update: Partial<Pick<Concern, 'type' | 'wording'>>) {
     setConcerns((items) => items.map((item) => item.uiId === uiId ? { ...item, ...update } : item));
@@ -139,18 +155,27 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         }
         if (issue.path[0] === 'declaration') next.declaration = 'declarationError';
       }
-      setFieldErrors(next); setError('reviewFields'); return;
+      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); return;
     }
     setFieldErrors({}); setBusy(true); setAttempt(true);
     try {
       const receipt = await api<{ id: string }>('/complaints', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(parsed.data) });
+      submitted.current = true;
       navigate(`/cases/${receipt.id}`);
     } catch { setError('submitError'); }
     finally { setBusy(false); }
   }
 
   return <div className="form-layout">
+    <aside className="help-column" aria-label={t('sideNav')}>
+      <nav className="section-nav" aria-label={t('sideNav')}><a href="#story-title">{t('sectionStory')}</a><a href="#concerns-title">{t('sectionIssues')} <span className="count-pill">{concerns.length}</span></a><a href="#review-title">{t('sectionReview')}</a></nav>
+      <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
+      <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
+    </aside>
     <form onSubmit={submit} className="form-surface" noValidate>
+      {error === 'reviewFields' && summaryItems.length > 0 && <section ref={summaryRef} className="error-summary" role="alert" aria-labelledby="error-summary-title" tabIndex={-1}>
+        <h2 id="error-summary-title">{t('reviewFields')}</h2><ul>{summaryItems.map((item) => <li key={item.field}><a href={`#${item.targetId}`} onClick={(event) => { event.preventDefault(); const control = document.getElementById(item.targetId); control?.focus(); control?.scrollIntoView({ behavior: 'auto', block: 'center' }); }}>{item.labelKey === 'concern' ? `${t(item.labelKey)} ${item.concernNumber}` : t(item.labelKey)}: {t(item.error)}</a></li>)}</ul>
+      </section>}
       <section className="form-section" aria-labelledby="story-title">
         <h2 id="story-title">{t('storyTitle')}</h2><p className="section-intro">{t('storyIntro')}</p>
         <label className="field-label" htmlFor="narrative">{t('account')}</label>
@@ -186,21 +211,32 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         {!enabled && <p className="field-help">{t('startSessionToSubmit')}</p>}<p className="field-help">{t('privateReceipt')}</p>
       </section>
     </form>
-    <aside className="help-column" aria-label={t('sideNav')}>
-      <nav className="section-nav" aria-label={t('sideNav')}><a href="#story-title">{t('sectionStory')}</a><a href="#concerns-title">{t('sectionIssues')} <span className="count-pill">{concerns.length}</span></a><a href="#review-title">{t('sectionReview')}</a></nav>
-      <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
-      <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
-    </aside>
   </div>;
 }
 
-function CasePage({ ready, signedIn, language, t, onAuthFailure }: { ready: boolean; signedIn: boolean; language: Language; t: Translator; onAuthFailure: () => void }) {
+function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: boolean; language: Language; t: Translator }) {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [record, setRecord] = useState<CaseRecord>();
   const [state, setState] = useState<'loading' | 'ready' | 'not-found' | 'unavailable' | 'auth-error'>('loading');
   const [loadedId, setLoadedId] = useState<string>();
   const [retry, setRetry] = useState(0);
+  const [recovering, setRecovering] = useState(false);
+  const recoveryLock = useRef(false);
+  const [recoveryMessage, setRecoveryMessage] = useState<'authRecoveryFailed' | 'authRecoveryTimeout' | 'authRecoveryUnavailable' | 'authRecoveryReceiptFailed'>('authRecoveryFailed');
+  const [copyState, setCopyState] = useState<'idle' | 'success' | 'failure'>('idle');
+  const recovery = useMemo(() => createReceiptRecovery<CaseRecord>({
+    getIdentity: async () => {
+      const { data, error } = await auth!.auth.getSession();
+      if (error) throw error;
+      return data.session?.user.id;
+    },
+    refreshIdentity: async () => {
+      const { data, error } = await auth!.auth.refreshSession();
+      if (error) throw error;
+      return data.session?.user.id;
+    },
+    retryReceipt: () => api<CaseRecord>(`/complaints/${encodeURIComponent(id ?? '')}`),
+  }), [id]);
   useEffect(() => {
     setRecord(undefined); setState('loading'); setLoadedId(undefined);
     if (!ready || !signedIn || !id) return;
@@ -214,19 +250,43 @@ function CasePage({ ready, signedIn, language, t, onAuthFailure }: { ready: bool
   }, [id, ready, signedIn, retry]);
   const visibleState = loadedId === id ? state : 'loading';
   if (!ready) return <section className="notice"><h1>{t('receiptAccess')}</h1><p>{t('receiptAccessBody')}</p><Link to="/">{t('goFile')}</Link></section>;
-  if (visibleState === 'auth-error') return <section className="notice" role="alert"><h1>{t('authErrorTitle')}</h1><p>{t('authErrorBody')}</p><button type="button" onClick={() => { onAuthFailure(); navigate('/'); }}>{t('restartSession')}</button></section>;
+  async function recoverReceipt() {
+    if (recoveryLock.current) return;
+    recoveryLock.current = true; setRecovering(true); setRecoveryMessage('authRecoveryFailed');
+    try {
+      const result = await recovery();
+      if (result.kind === 'recovered') { setRecord(result.value); setState('ready'); setLoadedId(id); }
+      else if (result.kind === 'timed-out') { setRecoveryMessage('authRecoveryTimeout'); setState('auth-error'); }
+      else if (result.kind === 'identity-unavailable' || result.kind === 'identity-changed') { setRecoveryMessage('authRecoveryUnavailable'); setState('auth-error'); }
+      else if (result.kind === 'receipt-failed') {
+        if (result.status === 401) { setRecoveryMessage('authRecoveryReceiptFailed'); setState('auth-error'); }
+        else setState(receiptFailureState(result.status));
+      }
+      else setState('auth-error');
+    } finally { recoveryLock.current = false; setRecovering(false); }
+  }
+  if (visibleState === 'auth-error') return <section className="notice" role="alert"><h1>{t('authErrorTitle')}</h1><p>{t(recoveryMessage)}</p><button type="button" onClick={() => { void recoverReceipt(); }} disabled={recovering}>{recovering ? t('authRecoveryWorking') : t('authRecoveryAction')}</button></section>;
   if (!signedIn) return <section className="notice"><h1>{t('receiptAccess')}</h1><p>{t('receiptAccessBody')}</p><Link to="/">{t('goFile')}</Link></section>;
   if (visibleState === 'not-found') return <section className="notice" role="alert"><h1>{t('notFoundTitle')}</h1><p>{t('notFoundBody')}</p><Link to="/">{t('goFile')}</Link></section>;
   if (visibleState === 'unavailable') return <section className="notice" role="alert"><h1>{t('receiptErrorTitle')}</h1><p>{t('receiptErrorBody')}</p><button type="button" onClick={() => setRetry((value) => value + 1)}>{t('loadReceipt')}</button></section>;
   if (!record || visibleState !== 'ready') return <p className="live-message" role="status" aria-live="polite">{t('loadingReceipt')}</p>;
+  const loadedRecord = record;
   const locale = language === 'hi' ? 'hi-IN' : 'en-IN';
+  async function copyReference() {
+    const copied = await copyExactReference(loadedRecord.id, async (value) => {
+      if (!navigator.clipboard?.writeText) throw new Error('clipboard-unavailable');
+      await navigator.clipboard.writeText(value);
+    });
+    setCopyState(copied ? 'success' : 'failure');
+  }
   return <article className="receipt" aria-labelledby="receipt-title">
     <div className="receipt-heading"><p className="sample-label">{t('desk')}</p><h1 id="receipt-title">{t('receiptTitle')}</h1><span className="status">{t('receiptStatusSubmitted')}</span></div>
-    <dl className="receipt-meta"><div><dt>{t('reference')}</dt><dd className="reference">{record.id}</dd></div><div><dt>{t('submitted')}</dt><dd><time dateTime={record.submittedAt}>{new Date(record.submittedAt).toLocaleString(locale)}</time></dd></div><div><dt>{t('office')}</dt><dd>{t('desk')}</dd></div></dl>
-    <section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{record.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
-      <ol className="saved-concerns">{record.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>
+    <dl className="receipt-meta"><div><dt>{t('reference')}</dt><dd className="reference" id="case-reference">{loadedRecord.id}</dd></div><div><dt>{t('submitted')}</dt><dd><time dateTime={loadedRecord.submittedAt}>{new Date(loadedRecord.submittedAt).toLocaleString(locale)}</time></dd></div><div><dt>{t('office')}</dt><dd>{t('desk')}</dd></div></dl>
+    <section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
+      <ol className="saved-concerns">{loadedRecord.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>
     </section>
-    <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
+    <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
+    {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
   </article>;
 }
 

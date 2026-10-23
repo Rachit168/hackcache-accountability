@@ -9,6 +9,7 @@ import { createReceiptRecovery } from './receipt-recovery';
 import { attachLeaveWarning, copyExactReference, fieldErrorSummary, shouldWarnOnLeave } from './form-usability';
 import type { FormError } from './form-types';
 import './style.css';
+import { StaffSession, WorkflowWorkspace } from './workflow';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -58,7 +59,7 @@ function App() {
         if (!active) return;
         setConfig(value);
         if (value.ready && value.url && value.publishableKey) {
-          auth ??= createClient(value.url, value.publishableKey);
+          auth ??= createClient(value.url, value.publishableKey,{auth:{storageKey:window.location.pathname.startsWith('/staff')?'janvaani-operator-session':'sb-'+new URL(value.url).hostname.split('.')[0]+'-auth-token'}});
           if (hotData) hotData.auth = auth;
           const { data } = await auth.auth.getSession();
           if (active) setSignedIn(!!data.session);
@@ -93,6 +94,8 @@ function App() {
           <ComplaintForm enabled={signedIn && !!config?.ready} language={language} t={t} />
         </>} />
         <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
+        <Route path="/staff" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
+        <Route path="/staff/:id" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
         <Route path="*" element={<section className="notice"><h1>{t('pageNotFound')}</h1><Link to="/">{t('returnWorkspace')}</Link></section>} />
       </Routes>
       <section id="privacy" className="privacy" aria-labelledby="privacy-title"><h2 id="privacy-title">{t('usingDemo')}</h2><p>{t('privacyBody')}</p></section>
@@ -287,6 +290,7 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     </section>
     <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
     {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
+    <WorkflowWorkspace api={api} language={language} caseId={id}/>
   </article>;
 }
 

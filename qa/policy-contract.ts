@@ -10,7 +10,7 @@ export interface PolicyDefinition {
 // expressions. Ignore incidental whitespace/parentheses, text-literal casts,
 // identifier quoting and built-in schema qualification. No operators (including
 // OR/NOT), references or predicates are removed. This is not a general SQL parser.
-function expressionTokens(expression: string | null): string[] {
+export function expressionTokens(expression: string | null): string[] {
   assert.equal(typeof expression, 'string');
   const tokens: string[] = [];
   const lexer = /\s+|'(?:''|[^'])*'|"(?:""|[^"])*"|[a-zA-Z_][a-zA-Z_0-9]*|[0-9]+|::|[().,=]/y;

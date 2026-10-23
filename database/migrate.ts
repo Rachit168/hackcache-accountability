@@ -24,6 +24,15 @@ try {
       await client.query('INSERT INTO hc_private.migrations(version) VALUES(1)');
     }
     await client.query(`ALTER ROLE hc_runtime LOGIN PASSWORD ${pg.escapeLiteral(process.env.HC_RUNTIME_PASSWORD)}`);
-    await client.query('COMMIT'); console.log('Migration 001 applied/already present; runtime password provisioned.');
+    const files=(await fs.readdir(new URL('./',import.meta.url))).filter(name=>/^\d{3}_.+\.sql$/.test(name)).sort();
+    for(const file of files){
+      const version=Number(file.slice(0,3));
+      const applied=await client.query('SELECT 1 FROM hc_private.migrations WHERE version=$1',[version]);
+      if(!applied.rowCount){
+        await client.query(await fs.readFile(new URL(file,import.meta.url),'utf8'));
+        await client.query('INSERT INTO hc_private.migrations(version) VALUES($1)',[version]);
+      }
+    }
+    await client.query('COMMIT'); console.log('Pending numbered migrations applied in order; runtime password provisioned.');
   }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
 }catch{console.error(transactionOpened?'Migration failed; rollback was attempted. Check dedicated setup privately.':'Migration connection/start failed; no migration SQL executed. Check dedicated setup privately.');process.exitCode=1;}finally{await pool.end();}

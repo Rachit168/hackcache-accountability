@@ -1,5 +1,15 @@
 # HC-P6 current handoff
 
+## Current handoff — HC-P6-T04 Phase 2A
+
+Implemented and self-verified the reviewed office handoff, acknowledgement and written-response path. See [t04-evidence.md](t04-evidence.md) for operator provisioning, database authority boundaries, actual local/connected/browser checks, retained screenshots and remaining limits. The current UI design and citizen foundation are retained.
+
+Migration 002 and correction 003 are applied to the dedicated project; migration 001 and existing records remain intact. All 42 local tests, typecheck, build, expanded foundation connected checks and six-identity workflow checks pass. The real browser path completed with distinct citizen/reviewer/office identities and an explicitly unanswered conduct concern. Phase 2A is ready for separate verification, not independently accepted.
+
+The run observed 48% five-hour usage from a 34% baseline (+14 shared points), beyond its +12 stop. Implementation stopped at that observation; only final verification/evidence/publication followed. Hindi staff/phone operation, a dedicated concurrent workflow-command race and physical-device/screen-reader acceptance remain unverified. Later phases remain deferred.
+
+## Historical UI03 handoff
+
 Current status: HC-P6-UI03 IMPLEMENTED / 42_LOCAL_TESTS_PASSED / TYPECHECK_AND_BUILD_PASSED / BILINGUAL_DESKTOP_AND_390PX_BROWSER_REVIEWED / FICTIONAL_RECEIPT_RELOAD_AND_COPY_PASSED / READY_TO_RETAIN. Same-identity refresh recovery is verified with controlled dependencies, not a live expired-token session. Browser-native leave-confirmation display was not independently observed. Self-check evidence is not independent acceptance. HC-P6-T04 / Phase 2A remains paused as directed.
 
 ## Current handoff — HC-P6-UI03

@@ -21,6 +21,8 @@ export function caseStore(pool:pg.Pool) {
       const result=await client.query<{receipt:Receipt}>('SELECT hc_private.submit_complaint($1::uuid,$2::jsonb) AS receipt',[key,JSON.stringify(payload)]);
       return result.rows[0].receipt;
     }),
+    workflowRead:(actor:string,id?:string)=>transaction(pool,actor,async client=>(await client.query('SELECT hc_private.workflow_read($1::uuid) AS value',[id??null])).rows[0].value),
+    workflowCommit:(actor:string,id:string,key:string,action:string,body:unknown)=>transaction(pool,actor,async client=>(await client.query('SELECT hc_private.workflow_commit($1::uuid,$2::uuid,$3::text,$4::jsonb) AS value',[id,key,action,JSON.stringify(body)])).rows[0].value),
     read:(actor:string,id:string)=>transaction(pool,actor,async client=>{
       const result=await client.query<{record:CaseRecord|null}>('SELECT hc_private.read_complaint($1::uuid) AS record',[id]); return result.rows[0].record;
     })

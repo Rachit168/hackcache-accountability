@@ -27,6 +27,8 @@ Primary verification references: [PostgreSQL backend/blocking and privilege inqu
 - Start: 2026-10-23 13:35:06 UTC / 19:05:06 IST; five-hour used 17%, weekly used 11%.
 - First verified correction: 13:37:53 UTC / 19:07:53 IST; five-hour used 19%, weekly used 11%.
 - Bucket codex; reset identifiers 1792777498 (300-minute window) / 1793304810 (10,080-minute window). Shared-account changes are not isolated task cost. Final observed checkpoint and publication identity are in handoff below.
+- Pre-handoff: 13:43:58 UTC / 19:13:58 IST, five-hour 22%, weekly 12%; same resets. Observed interval 8m52s, five-hour change +5 pp; attribution not isolated. Documentation finalisation followed this observation.
+- Bounded correction commit `f6ffcee8877a17328d75734d201b1e12d689e58f` pushed successfully to the existing public repository. Local HEAD, git ls-remote and GitHub main API matched; new source/check files were present remotely. Nine staged files reviewed, no matching credential patterns or forbidden paths. A subsequent docs-only commit records this checkpoint; its final hash is supplied in chat.
 
 The remaining sections are **historical Task 01 evidence**; they do not represent a second execution in Task 02.
 

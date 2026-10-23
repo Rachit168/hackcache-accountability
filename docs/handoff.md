@@ -12,7 +12,9 @@ Strengthened the connected runner with two pinned independent backend connection
 
 Outstanding private setup, unchanged: create/identify the dedicated hackathon Supabase project; enable anonymous Auth; populate the ignored `.env` with project URL/publishable key/ref and matching dedicated confirmation, separate runtime/migration database URLs and runtime password; ensure hc_private is unexposed; apply migration; explicitly enable RUN_CONNECTED_CHECKS=true. Run the checks, then the real four-concern browser journey. Never send credentials in chat. Neither migration nor cloud changes were attempted in Task 02.
 
-Task 02 publication and final resource checkpoint will be appended after staged review and remote verification. Historical Task 01 publication hashes below remain labelled checkpoints, not the final Task 02 HEAD.
+Task 02 correction commit: `f6ffcee8877a17328d75734d201b1e12d689e58f`. Push succeeded to the existing public https://github.com/Rachit168/hackcache-accountability repository. Local HEAD, git ls-remote and GitHub's main-commit API matched. The remote tree contained the four new source/check files, and no forbidden generated/secret-bearing paths. Nine staged files were reviewed; credential-pattern scan had no matches. This publication/resource evidence is a following documentation commit; its final local/remote identity is returned in chat (a file cannot embed its own eventual commit hash).
+
+Pre-handoff checkpoint: 2026-10-23 13:43:58 UTC / 19:13:58 IST; five-hour used 22%, weekly used 12%. Start 13:35:06 UTC was 17% / 11%; first correction 13:37:53 UTC was 19% / 11%. Start-to-final-observed interval 8m52s, same reset identifiers 1792777498 / 1793304810. Observed five-hour change +5 pp is shared-account activity, not isolated task cost. Documentation finalisation followed. No paid/reset credits or model/speed changes. Historical Task 01 publication/resource records below are retained separately.
 
 ## Delivered
 Typed written-intake frontend and Express API, shared Zod validation, private receipt/case route, managed Supabase authentication adapter, idempotent citizen workspace bootstrap, transactional restricted SQL commands, versioned migration, focused tests, connected check runner and teammate starter packets.
@@ -29,7 +31,7 @@ A new dedicated hackathon Supabase project; anonymous Auth enabled; project URL/
 Finish Task 01 connected verification first: apply migration, inspect real role/RLS/grants, run separate-identity persistence/denial, idempotency/atomicity/context checks, then browser written entry → four concerns → receipt → reload. Correct observed failures within this slice. Only then advance to reviewer-approved office projections and the incomplete-response loop; AI, uploads and escalation remain deferred.
 
 ## Evidence and limits
-See task-01-evidence.md for actual commands, initial typecheck failure/correction and skips. Eleven local tests passed; connected checks were NOT RUN. Full hash-chain verification is NOT IMPLEMENTED. Browser-managed anonymous sessions do not establish institutional identity or guarantee cross-device recovery. Self-checks are not independent acceptance.
+See task-01-evidence.md for actual commands, initial typecheck failure/correction and skips. Sixteen local tests now pass (Task 01 had eleven); connected checks remain NOT RUN. Full hash-chain verification is NOT IMPLEMENTED. Browser-managed anonymous sessions do not establish institutional identity or guarantee cross-device recovery. Self-checks are not independent acceptance.
 
 Pre-window development was explicitly requested by the owner and is disclosed in README. Requested model GPT-6.1 Sol / High / Standard; observed backend settings UNKNOWN.
 

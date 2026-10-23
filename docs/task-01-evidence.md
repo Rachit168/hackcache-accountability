@@ -1,6 +1,43 @@
 # HC-P6-T01 — factual evidence
 
-## Latest: HC-P6-T03 checker corrections and actual setup investigation
+## Final connected/browser evidence — 23 October 2026
+
+Status: **CONNECTED_SELF_CHECKS_PASSED / BROWSER_JOURNEY_PASSED / READY_FOR_OWNER_ACCEPTANCE**. This is implementation self-check evidence, not independent acceptance or production approval. Historical NOT RUN/failure entries below are preserved chronologically.
+
+### Executed commands and observed corrections
+- Fresh authorized baseline 14:53:07 UTC / 20:23:07 IST: five-hour 57%, weekly 17%; resets 1792777498 / 1793304810.
+- `npm run setup:database`: prepared private migration URL correctly. `npm run db:migrate`: initially failed pre-connection; diagnostic code SELF_SIGNED_CERT_IN_CHAIN. No SQL from that failed attempt.
+- Retrieved the official Supabase CA via the exact download href in the signed-in project's Database Settings. Source/provenance is recorded in database/certs/README.md. X509 CA=true; SHA-256 fingerprint `80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA`; valid through 26 April 2031. File is a public CA, not a private key. All writes stayed under Hack Cache. No SSL-verification bypass/global trust change.
+- Added shared postgresTls explicit CA support with fail-closed file loading. Migration/runtime/integration retain rejectUnauthorized=true. One local regression verifies defaults, explicit CA and absent-file failure.
+- `npm run db:migrate`: exit 0, Migration 001 applied/already present; runtime password provisioned.
+- `npm run integration-check`: first failed at policy-role decoding (`{hc_writer}` string versus expected array). Fixed catalog query to roles::text[]; permissions and policies unchanged.
+- `npm run integration-check`, after that correction: **exit 0, CONNECTED_SELF_CHECKS_PASSED**.
+- `npm test`: **30 passed / six files**. `npm run typecheck`: passed. `npm run build`: passed, retaining the existing 564.41 kB / gzip 162.94 kB client bundle warning. Checks were not broadened/repeated after passing.
+
+### Connected observations — hosted Supabase
+- Distinct real managed anonymous citizens A/B; A submission and exact narrative/four-concern readback succeeded; B's read returned 404. Missing/forged tokens and forged body identity/workspace fields rejected.
+- Sequential identical retries retained one receipt/case/original/event. Changed content under the same key returned 409.
+- Fresh competing first submissions used PostgreSQL backends **11906 and 11907**. Audit observed actual blocking before the first commit. Both receipts matched; counts: cases=1, originals=1, concerns=4, events=1.
+- Controlled invalid concern caused a failed command; audit found zero case records for its actor/key. Single-connection context was clear after commit and rollback.
+- Runtime SELECT/INSERT/UPDATE/DELETE probes were denied; catalog audit verified roles, ownership, forced RLS, intended policy logic, function owners/search paths and grants for runtime/anon/authenticated/PUBLIC.
+- Direct RLS harness verified hc_writer non-owner/non-BYPASSRLS context, actor/workspace positive/negative visibility and rejected INSERTs; harness writes rolled back. These differ from public API/command checks. Administrative reads supplied counts/catalog evidence, not restricted-runtime proof.
+- Private hc_private profile rejected by PostgREST with HTTP 406 / PGRST106.
+- Retained fictional integration record `06ba5269-ebc2-4c6e-8ecd-454be233a736` plus race record; no shared reset or history deletion.
+
+### Actual browser and persisted-content observations
+- Restarted the built Node application with configured managed Auth/PostgreSQL. Real browser sign-in succeeded.
+- Entered fictional narrative with four manually entered concerns (three service, one conduct), confirmed declaration, submitted, saw receipt and then reloaded it successfully.
+- Browser case `6e640aaa-798d-4889-a47a-411abb8b1044`; server time `2026-10-23T14:58:04.717Z`; status submitted.
+- Separate database audit asserted the complete narrative and all four concern type/wording pairs equal the browser-entered fixture; submission event count=1. This is actual persistence evidence, distinct from an HTML-route 200.
+- Nonexistent case displayed Complaint not found; saved case restored afterward. Local viewport screenshot qa/artifacts/task-03-connected-receipt.png is ignored; full-page capture unsupported. No complete mobile/accessibility or browser-B acceptance is claimed; real B denial was verified through the API.
+- Cleared temporary raw-password staging only after verified success; ignored encoded connection URLs retained. No secret values printed, committed or screenshot.
+
+### Resource and acceptance boundary
+Checkpoint 14:55:58 UTC: five-hour 61%, weekly 18%; 14:57:36 UTC: 63% / 18%; final observed 15:00:28 UTC / 20:30:28 IST: 69% / 19%, same reset IDs. Start-to-end observation 7m21s, +12 pp shared five-hour usage, attribution not isolated. No new implementation after stop; evidence/publication only. No paid/reset credits or model/speed changes.
+
+Phase 1's bounded written-foundation requirements are demonstrated at self-check level and ready for owner acceptance. No independent acceptance, public deployment, production security or later-feature completion is implied. Full hash-chain verifier remains NOT IMPLEMENTED by declared scope.
+
+## Historical HC-P6-T03 checker corrections and actual setup investigation
 
 ### Renewed run: actual setup, URI correction, resource stop
 

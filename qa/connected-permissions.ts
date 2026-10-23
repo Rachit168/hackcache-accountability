@@ -23,7 +23,7 @@ export async function inspectPermissions(runtime: pg.Pool, audit: pg.Pool) {
   for (const table of tables.rows) {
     assert.equal(table.owner, 'hc_owner'); assert.equal(table.relrowsecurity, true); assert.equal(table.relforcerowsecurity, true);
   }
-  const policies = await audit.query<PolicyDefinition>(`SELECT tablename,policyname,roles,cmd,permissive,qual,with_check FROM pg_policies
+  const policies = await audit.query<PolicyDefinition>(`SELECT tablename,policyname,roles::text[] AS roles,cmd,permissive,qual,with_check FROM pg_policies
     WHERE schemaname='hc_private' AND tablename=ANY($1::text[]) ORDER BY tablename,policyname`, [dataTables]);
   assertPolicyContract(policies.rows);
   const functions = await audit.query(`SELECT p.proname,r.rolname AS owner,p.prosecdef,p.proconfig,

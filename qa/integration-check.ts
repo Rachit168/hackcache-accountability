@@ -11,6 +11,7 @@ import { complaintSchema } from '../domain/complaint.js';
 import { firstSubmissionRace } from './first-submission-race.js';
 import { inspectPermissions,checkPrivateSchemaExposure } from './connected-permissions.js';
 import { checkPolicyBehavior } from './policy-behavior.js';
+import { postgresTls } from '../server/postgres-tls.js';
 const config=configuration();
 if(!config.ready||process.env.RUN_CONNECTED_CHECKS!=='true'||!process.env.MIGRATION_DATABASE_URL){console.log('CONNECTED_CHECKS_NOT_RUN: dedicated Supabase configuration, migration audit credentials and RUN_CONNECTED_CHECKS=true required. No fake identity/storage substitute used.');process.exitCode=2;}
 else {
@@ -18,7 +19,7 @@ else {
  const ref=process.env.SUPABASE_PROJECT_REF;
  const adminUser=decodeURIComponent(adminUrl.username);
  if(adminUser.startsWith('hc_runtime')||!(adminUrl.hostname===`db.${ref}.supabase.co`||(adminUrl.hostname.endsWith('.pooler.supabase.com')&&adminUser===`postgres.${ref}`))) throw new Error('Audit credentials must target the confirmed dedicated project and differ from runtime.');
- const connectionOptions={ssl:{rejectUnauthorized:true},connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000};
+ const connectionOptions={ssl:postgresTls(),connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000};
  const pool=new pg.Pool({connectionString:config.databaseUrl,max:1,...connectionOptions});
  const racePool=new pg.Pool({connectionString:config.databaseUrl,max:2,...connectionOptions});
  const audit=new pg.Pool({connectionString:adminUrl.toString(),max:1,...connectionOptions});

@@ -2,12 +2,13 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import pg from 'pg';
 import { configuration } from '../server/config.js';
+import { postgresTls } from '../server/postgres-tls.js';
 if(!configuration().ready||!process.env.MIGRATION_DATABASE_URL||!process.env.HC_RUNTIME_PASSWORD) throw new Error('Dedicated project, runtime URL, migration URL and HC_RUNTIME_PASSWORD are required. No database changes attempted.');
 const admin=new URL(process.env.MIGRATION_DATABASE_URL);
 if(decodeURIComponent(admin.username).startsWith('hc_runtime')) throw new Error('Migration and runtime credentials must differ.');
 const ref=process.env.SUPABASE_PROJECT_REF;
 if(!(admin.hostname===`db.${ref}.supabase.co`||(admin.hostname.endsWith('.pooler.supabase.com')&&decodeURIComponent(admin.username)===`postgres.${ref}`))) throw new Error('Migration URL must target the confirmed dedicated project.');
-const pool=new pg.Pool({connectionString:admin.toString(),ssl:{rejectUnauthorized:true},max:1});
+const pool=new pg.Pool({connectionString:admin.toString(),ssl:postgresTls(),max:1,connectionTimeoutMillis:8000,statement_timeout:15000,query_timeout:18000});
 let transactionOpened=false;
 try {
   const client=await pool.connect();

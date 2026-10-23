@@ -1,8 +1,26 @@
 # Task 01 handoff
 
-Current status: LOCAL_FOUNDATION_VERIFIED / GITHUB_PUBLISHED / CONNECTED_VERIFICATION_PENDING.
+Current status: CONNECTED_SELF_CHECKS_PASSED / BROWSER_JOURNEY_PASSED / READY_FOR_OWNER_ACCEPTANCE. Self-check evidence is not independent acceptance.
 
-## HC-P6-T03 latest handoff
+## Completed connected foundation — final authorized run
+
+The owner authorized another bounded run. Start 2026-10-23 14:53:07 UTC / 20:23:07 IST: five-hour USED 57%, weekly 17%, resets 1792777498 / 1793304810. Private configuration was reused without printing credentials.
+
+Migration initially failed before SQL because the Node trust store did not trust the Supabase chain (SELF_SIGNED_CERT_IN_CHAIN). Downloaded the public CA from the exact HTTPS link in the project's Database Settings certificate control, directly into database/certs. The attempted CDP download-path method was unsupported and no browser download was started; the verified link was downloaded using the terminal to the authorized root. Added explicit CA loading for migration/runtime/integration while retaining rejectUnauthorized=true and hostname verification. No global trust store or hosted SSL setting was changed. Migration 001 then succeeded and provisioned the restricted runtime login.
+
+First connected attempt failed because pg returned the catalog's name[] policy-role field as a string. Corrected the inspection query to cast roles::text[]; no grants or policies were changed to obtain a pass. The complete connected runner then exited 0 / CONNECTED_SELF_CHECKS_PASSED. It verified A/B identities and persistence, denial and forged fields, exact four-concern readback, sequential retries, independent first submissions, changed-content rejection, atomic failure rollback, runtime direct access restrictions, policy contract/behavior, context reset and PGRST106 private-schema exclusion.
+
+The race observed actual blocking on distinct backends 11906 and 11907, with one case, one original, four concerns and one event. The policy harness used hc_writer after verifying non-owner/non-superuser/non-BYPASSRLS execution, and rolled its fixtures back. Admin count/catalog reads remain separately labelled audit evidence.
+
+Browser: used real anonymous managed Auth through the built server at localhost:3000; entered a fictional narrative, four service/conduct concerns and declaration; submitted and received case `6e640aaa-798d-4889-a47a-411abb8b1044` at `2026-10-23T14:58:04.717Z`; reloaded and retrieved the same record. A separate hosted database audit asserted the exact narrative and all four concern type/wording pairs, status submitted and exactly one event. Browser not-found error was observed for a nonexistent case, then the saved receipt was restored. Viewport screenshot: qa/artifacts/task-03-connected-receipt.png (ignored). Full-page capture was unsupported; this is not full mobile/accessibility acceptance.
+
+All **30 local tests** passed, typecheck passed, production build passed; only the existing client bundle warning remains. No remaining checker failure was observed in these runs. The temporary raw-password staging field was cleared only after successful migration/connected verification; private encoded URLs remain ignored locally. No credentials or publishable keys are included in tracked evidence/screenshots.
+
+Phase 1's written-foundation requirements have now been demonstrated through implementation self-checks and the browser journey; it is **ready for owner acceptance**. Independent acceptance/review, public deployment, production/security certification and later product phases remain outside this result. No further external setup blocker remains for this configured local environment.
+
+End observation 2026-10-23 15:00:28 UTC / 20:30:28 IST: five-hour USED 69%, weekly 19%, unchanged resets; observed interval 7m21s and +12 pp shared-account change, not isolated task cost. No new implementation started after this stop checkpoint; documentation/publication followed. Final commit identity is reported in chat after push verification.
+
+## Historical HC-P6-T03 setup/checker handoff
 
 ### Renewed connected-verification run checkpoint
 
@@ -62,14 +80,14 @@ Application and Git root: `D:\project\Hack Cache`. All source folders live direc
 ## Run
 `npm ci`, configure ignored `.env` from `.env.example`, then `npm run dev`; or `npm run build` and `npm start`. Local built server uses http://127.0.0.1:3000 by default and honours PORT. Missing configuration shows a setup-needed state; it never creates a fake citizen or saves a complaint to browser storage.
 
-## Required private operator setup
-A new dedicated hackathon Supabase project; anonymous Auth enabled; project URL/publishable key/ref; matching dedicated-project confirmation; distinct runtime and migration database URLs; runtime password. Set these locally in `.env`, never in chat. Ensure the private schema stays unexposed, apply `npm run db:migrate`, then explicitly enable/run `npm run integration-check` against only that dedicated project. Billing was not activated. No cloud project was modified.
+## Local configuration and reproduction
+This environment is now configured privately for the confirmed dedicated project, with anonymous Auth enabled, separate migration/runtime credentials and explicit official CA trust. Migration 001 did modify that dedicated hosted database. No unrelated project or paid billing service was used. The ignored .env is not published; another checkout/environment requires its own private setup from .env.example. Never put credentials in chat or tracked files. The completed connected check used only the confirmed dedicated project.
 
 ## Next bounded task
-Finish Task 01 connected verification first: apply migration, inspect real role/RLS/grants, run separate-identity persistence/denial, idempotency/atomicity/context checks, then browser written entry → four concerns → receipt → reload. Correct observed failures within this slice. Only then advance to reviewer-approved office projections and the incomplete-response loop; AI, uploads and escalation remain deferred.
+Owner acceptance of the recorded written-foundation slice, followed by a separately authorized reviewer-approved office projection and incomplete-response loop. No later product implementation was started. AI, uploads, escalation and public deployment remain deferred.
 
 ## Evidence and limits
-See task-01-evidence.md for actual commands, corrections and skips. Twenty-seven local tests now pass (Task 01 had eleven, Task 02 sixteen); connected checks remain NOT RUN. Full hash-chain verification is NOT IMPLEMENTED. Browser-managed anonymous sessions do not establish institutional identity or guarantee cross-device recovery. Self-checks are not independent acceptance.
+See task-01-evidence.md for actual commands, corrections and historical skips. Thirty local tests and the connected/browser checks now pass. Full hash-chain verification is NOT IMPLEMENTED. Browser-managed anonymous sessions do not establish institutional identity or guarantee cross-device recovery. Self-checks are not independent acceptance.
 
 Pre-window development was explicitly requested by the owner and is disclosed in README. Requested model GPT-6.1 Sol / High / Standard; observed backend settings UNKNOWN.
 

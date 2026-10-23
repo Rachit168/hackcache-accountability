@@ -8,10 +8,12 @@ if(decodeURIComponent(admin.username).startsWith('hc_runtime')) throw new Error(
 const ref=process.env.SUPABASE_PROJECT_REF;
 if(!(admin.hostname===`db.${ref}.supabase.co`||(admin.hostname.endsWith('.pooler.supabase.com')&&decodeURIComponent(admin.username)===`postgres.${ref}`))) throw new Error('Migration URL must target the confirmed dedicated project.');
 const pool=new pg.Pool({connectionString:admin.toString(),ssl:{rejectUnauthorized:true},max:1});
+let transactionOpened=false;
 try {
   const client=await pool.connect();
   try {
     await client.query('BEGIN');
+    transactionOpened=true;
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended('hc_migration',0))");
     const exists=await client.query("SELECT to_regclass('hc_private.migrations') IS NOT NULL AS applied");
     if(!exists.rows[0].applied){
@@ -23,4 +25,4 @@ try {
     await client.query(`ALTER ROLE hc_runtime LOGIN PASSWORD ${pg.escapeLiteral(process.env.HC_RUNTIME_PASSWORD)}`);
     await client.query('COMMIT'); console.log('Migration 001 applied/already present; runtime password provisioned.');
   }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
-}catch{console.error('Migration failed; transaction rolled back. Check dedicated project permissions/configuration privately.');process.exitCode=1;}finally{await pool.end();}
+}catch{console.error(transactionOpened?'Migration failed; rollback was attempted. Check dedicated setup privately.':'Migration connection/start failed; no migration SQL executed. Check dedicated setup privately.');process.exitCode=1;}finally{await pool.end();}

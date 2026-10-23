@@ -2,6 +2,19 @@
 
 ## Latest: HC-P6-T03 checker corrections and actual setup investigation
 
+### Renewed run: actual setup, URI correction, resource stop
+
+Fresh run explicitly authorized by the owner. Start 2026-10-23 14:35:25 UTC / 20:05:25 IST: five-hour 42%, weekly 15%, reset identifiers 1792777498 / 1793304810.
+
+- Browser observations: confirmed project API-key/settings and session-pooler connection controls. Publishable key was transferred directly into ignored local configuration without printing it; no secret key was requested. Generated a distinct runtime password locally. `.env` was confirmed ignored by Git.
+- Actual endpoint observations: GET /auth/v1/settings returned 200 with the prepared publishable configuration, first anonymous_users=false; after the user's saved change, true. This proves reachable Auth configuration, not successful managed sign-in or application persistence.
+- Private setup: the user entered the chosen database password locally. Initial conversion mishandled URI encoding; `npm run db:migrate` failed before connecting. A diagnostic confirmed URIError and the fixed message URI malformed, without printing credentials. No SQL migration, rollback or database change is claimed from this attempt. The old generic rollback message was inaccurate for this failure and is corrected in source.
+- Correction: migrationConnectionUri uses encodeURIComponent before setting URL.password; setup:database writes an encoded migration URL privately and keeps the staging password until verification. Two local tests round-trip fictional percent, reserved, Unicode and emoji passwords through pg's connection parser, and reject a mismatched project. Full suite **29 tests passed**, typecheck and build passed. Build warning unchanged (564.41 kB client chunk, gzip 162.94 kB).
+- The user saved the staging password again. A fresh resource gate prevented the migration retry: 14:47:35 UTC / 20:17:35 IST, five-hour 54%, weekly 17%, unchanged resets. Start-to-checkpoint 12m10s and +12 pp shared five-hour usage meets this run's stop. No new migration was started after the gate.
+- Connected runner, hosted SQL/RLS/permissions/race tests and real browser receipt/reload remain NOT RUN in this renewed run. Phase 1 remains unaccepted. Public configuration/Auth-enabled observations are kept separate from connected case acceptance.
+
+Checkpoint 14:40:33 UTC / 20:10:33 IST was five-hour 48%, weekly 16%. Shared counters do not isolate task cost. No paid/reset credits or model/speed changes. Final documentation/publication followed the stop checkpoint.
+
 ### Follow-up: project now verified, original resource stop reached
 
 After the user reported creation, live browser headings/title confirmed `hackcache-accountability | HackCache | Supabase`; the project URL identified reference `vhfjobnvbbwfvdhwhxgb`. This resolves missing account access/project existence. A safe link inspection showed the dashboard's migration summary as No migrations; the agent did not apply any migration. No credential fields were inspected.

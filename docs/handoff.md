@@ -4,6 +4,20 @@ Current status: LOCAL_FOUNDATION_VERIFIED / GITHUB_PUBLISHED / CONNECTED_VERIFIC
 
 ## HC-P6-T03 latest handoff
 
+### Renewed connected-verification run checkpoint
+
+The owner explicitly authorized a fresh bounded run. Actual start: 2026-10-23 14:35:25 UTC / 20:05:25 IST, five-hour USED 42%, weekly 15%, resets 1792777498 / 1793304810. This was a fresh measured baseline, not an account reset.
+
+Confirmed project settings through the signed-in dashboard. Retrieved only its publishable configuration into ignored `.env`, generated a separate runtime password locally, and selected the observed session-pooler host. A credential-free summary of GET /auth/v1/settings returned HTTP 200. The user enabled anonymous sign-in; a later settings query confirmed anonymous_users=true. No paid service, account-security change or unrelated project was used.
+
+The user privately entered the database password. The initial local conversion failed to percent-encode it correctly, then cleared its staging field prematurely. Migration invocation failed with URIError / URI malformed before a database connection or migration SQL execution. The agent diagnosed only non-secret error fields, acknowledged the defect and asked the user to re-enter the password privately. No migration rollback is claimed for that pre-connection failure.
+
+Added `npm run setup:database` and a shared migration-URI helper that encodes password values exactly once. Two regression tests round-trip fictional special-character/percent/Unicode passwords through the actual pg Client parser and reject a different project login. The helper retains the staging field until connection verification. Migration failure text now distinguishes a pre-transaction connection/start failure from a later failure where rollback was attempted. All **29 local tests**, typecheck and build passed; the existing bundle warning remains.
+
+The user confirmed the password was saved again. Before retrying migration, the 2026-10-23 14:47:35 UTC / 20:17:35 IST checkpoint reported five-hour USED 54%, weekly 17%, same resets: +12 pp over 12m10s, shared-account activity rather than isolated task cost. The migration retry was therefore **not started**. The corrected helper is source/test verified; actual database connection remains unverified. Further migration/connected verification requires a renewed resource decision. No secrets belong in chat; ignored `.env` stays local and was not staged.
+
+Exact next work after authorization: run setup:database using the privately saved staging password, migrate the confirmed project, execute connected checks, repair observed foundation failures, then complete real browser receipt/reload. Anonymous Auth is now verified enabled; project creation is complete. Phase 1 remains unaccepted.
+
 ### Project-created continuation checkpoint
 
 The user reported creation, and the live dashboard confirmed project **hackcache-accountability** in organization **HackCache**, project reference `vhfjobnvbbwfvdhwhxgb`. Missing dashboard access and missing project are resolved. Local configuration is still absent: no .env, configuration ready=false, all required variables absent. No migration or connected/browser acceptance was attempted during this continuation. Auth provider settings and database credentials remain unverified; no password/key was read or printed.

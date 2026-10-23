@@ -20,6 +20,8 @@ Phase 1's written-foundation requirements have now been demonstrated through imp
 
 End observation 2026-10-23 15:00:28 UTC / 20:30:28 IST: five-hour USED 69%, weekly 19%, unchanged resets; observed interval 7m21s and +12 pp shared-account change, not isolated task cost. No new implementation started after this stop checkpoint; documentation/publication followed. Final commit identity is reported in chat after push verification.
 
+Verified source/evidence publication: `86e2413e68fb9befe701be85884f915f5b605e36` pushed to existing public main; local HEAD and git ls-remote main matched. Twelve staged files reviewed; no secret/publishable-key pattern or generated/private path was staged. Public CA certificate provenance is included; .env and browser artifacts remain ignored. This final publication-note commit follows that source checkpoint; its own verified hash is supplied in chat.
+
 ## Historical HC-P6-T03 setup/checker handoff
 
 ### Renewed connected-verification run checkpoint

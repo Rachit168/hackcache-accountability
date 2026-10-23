@@ -4,7 +4,7 @@ import { complaintSchema, uuidSchema } from '../domain/complaint.js';
 import type { configuration } from './config.js';
 import type { caseStore } from './database.js';
 import { complaintRequestLimitBytes } from './request-limits.js';
-type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'>>;
+type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'>>;
 type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>};
 export function createApp({config,store,verify}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
@@ -17,6 +17,10 @@ export function createApp({config,store,verify}:Dependencies) {
     if(!match){res.status(401).json({error:'Sign in with a managed citizen account.'});return;}
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
+  });
+  app.get('/api/records/:id',async(req,res,next)=>{
+    const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid record ID.'});return;}
+    try{if(!store?.recordRead){res.status(503).json({error:'Verification unavailable.'});return;}res.json(await store.recordRead(res.locals.actor,id.data));}catch(error){next(error);}
   });
   app.post('/api/complaints',async(req,res,next)=>{
     const key=uuidSchema.safeParse(req.get('Idempotency-Key')); const payload=complaintSchema.safeParse(req.body);

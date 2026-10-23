@@ -4,7 +4,7 @@ import { assertPolicyContract, expressionTokens, type PolicyDefinition } from '.
 
 const foundationTables = ['workspaces', 'memberships', 'cases', 'originals', 'concerns', 'events'];
 const workflowTables = ['demo_principals','review_assignments','outgoing_versions','workflow_actions'];
-const dataTables = [...foundationTables,...workflowTables];
+const dataTables = [...foundationTables,...workflowTables,'record_ledger'];
 
 export async function inspectPermissions(runtime: pg.Pool, audit: pg.Pool) {
   const roles = await audit.query(`SELECT rolname,rolcanlogin,rolsuper,rolbypassrls,rolcreatedb,rolcreaterole,rolreplication
@@ -46,10 +46,10 @@ export async function inspectPermissions(runtime: pg.Pool, audit: pg.Pool) {
     EXISTS(SELECT FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee=0 AND a.privilege_type='EXECUTE') AS public_execute
     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_roles r ON r.oid=p.proowner
     WHERE n.nspname='hc_private' ORDER BY p.proname`);
-  assert.deepEqual(functions.rows.map(row => row.proname), ['bootstrap','read_complaint','submit_complaint','workflow_commit','workflow_read']);
+  assert.deepEqual(functions.rows.map(row => row.proname), ['bootstrap','ledger_append','ledger_frame','ledger_trigger','read_complaint','record_read','submit_complaint','workflow_commit','workflow_read']);
   for (const fn of functions.rows) {
-    assert.equal(fn.owner, 'hc_writer'); assert.equal(fn.prosecdef, true);
-    assert.deepEqual(fn.proconfig, ['search_path=pg_catalog']); assert.equal(fn.runtime_execute, true);
+    assert.equal(fn.owner, 'hc_writer'); assert.equal(fn.prosecdef, fn.proname!=='ledger_frame');
+    assert.deepEqual(fn.proconfig, ['search_path=pg_catalog']); assert.equal(fn.runtime_execute, !['ledger_append','ledger_frame','ledger_trigger'].includes(fn.proname));
     for (const flag of ['anon_execute','authenticated_execute','public_execute']) assert.equal(fn[flag], false);
   }
   const schema = await audit.query(`SELECT r.rolname AS owner,
@@ -65,7 +65,7 @@ export async function inspectPermissions(runtime: pg.Pool, audit: pg.Pool) {
   for (const table of [...dataTables, 'migrations']) {
     for (const privilege of ['SELECT','INSERT','UPDATE','DELETE']) {
       const writer = await audit.query('SELECT has_table_privilege($1,$2,$3) AS allowed', ['hc_writer', `hc_private.${table}`, privilege]);
-      const allowed=foundationTables.includes(table)?['SELECT','INSERT']:['outgoing_versions','workflow_actions'].includes(table)?['SELECT','INSERT']:workflowTables.includes(table)?['SELECT']:[];
+      const allowed=foundationTables.includes(table)?['SELECT','INSERT']:['outgoing_versions','workflow_actions','record_ledger'].includes(table)?['SELECT','INSERT']:workflowTables.includes(table)?['SELECT']:[];
       assert.equal(writer.rows[0].allowed, allowed.includes(privilege));
     }
     for (const role of ['hc_runtime','anon','authenticated']) for (const privilege of ['SELECT','INSERT','UPDATE','DELETE']) {
@@ -91,7 +91,7 @@ export async function inspectPermissions(runtime: pg.Pool, audit: pg.Pool) {
         `DELETE FROM hc_private.${table} WHERE false`,
       ]) {
         // memberships has actor_id, not id.
-        const safeSql = ['memberships','demo_principals'].includes(table) ? sql.replace('SET id=id', 'SET actor_id=actor_id').replace('(id)','(actor_id)') : sql;
+        const safeSql = table==='record_ledger'?sql.replace('SET id=id','SET case_id=case_id').replace('(id)','(case_id)'):['memberships','demo_principals'].includes(table) ? sql.replace('SET id=id', 'SET actor_id=actor_id').replace('(id)','(actor_id)') : sql;
         await client.query('BEGIN');
         try { await assert.rejects(client.query(safeSql), (error: unknown) => (error as {code: string}).code === '42501'); }
         finally { await client.query('ROLLBACK'); }

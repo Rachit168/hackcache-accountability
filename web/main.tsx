@@ -10,6 +10,7 @@ import { attachLeaveWarning, copyExactReference, fieldErrorSummary, shouldWarnOn
 import type { FormError } from './form-types';
 import './style.css';
 import { StaffSession, WorkflowWorkspace } from './workflow';
+import { RecordVerification } from './record-verification';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -290,6 +291,7 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     </section>
     <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
     {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
+    <RecordVerification api={api} language={language} id={loadedRecord.id}/>
     <WorkflowWorkspace api={api} language={language} caseId={id}/>
   </article>;
 }

@@ -1,6 +1,12 @@
 # HC-P6 current handoff
 
-## Current handoff — HC-P6-T04 Phase 2A
+## Current handoff — HC-P6-B01 partial resource checkpoint
+
+B01 is **incomplete**. Additive migration 004 is applied: transactional submission/release/acknowledgement/response hash ledger, explicitly labeled legacy baselines, owner/assigned-reviewer private read endpoint and independent hash recomputation. The citizen/reviewer verification action builds but has not been browser-checked. Evidence uploads, private Storage, evidence finalization and byte verification are not implemented; UI says bytes are not checked.
+
+53 local tests, typecheck/build, expanded workflow connected checks (including ordered ledger assertions and actual database race), and foundation connected checks passed. Resource stop occurred at 76% used (24% remaining), from a fresh 70% baseline; implementation stopped and checkpoint checks followed. See [b01-evidence.md](b01-evidence.md) for actual failures/reruns, canonical algorithm, migration/security limits, reproduction and exact remaining work. Resume B01 from this partial checkpoint; do not claim acceptance or a completed evidence feature.
+
+## Historical handoff — HC-P6-T04 Phase 2A
 
 HC-P6-T04-CLOSE corrections are implemented and self-verified. Statement drafts and retry state now belong to each case/version/action; uncertain writes retain their key and submitted snapshot; readback failures offer a read-only retry; localized validation and transition feedback are in place; exact repeated successful content is disabled until edited. Staff role/office presentation, identifier wrapping and demo-tool labeling were improved while retaining the existing English/Hindi design and separate citizen/operator storage.
 

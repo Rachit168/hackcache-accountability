@@ -1,6 +1,6 @@
 # Task 01 handoff
 
-Current status: LOCAL_FOUNDATION_VERIFIED / CONNECTED_VERIFICATION_PENDING.
+Current status: LOCAL_FOUNDATION_VERIFIED / GITHUB_PUBLISHED / CONNECTED_VERIFICATION_PENDING.
 
 ## Delivered
 Typed written-intake frontend and Express API, shared Zod validation, private receipt/case route, managed Supabase authentication adapter, idempotent citizen workspace bootstrap, transactional restricted SQL commands, versioned migration, focused tests, connected check runner and teammate starter packets.
@@ -22,4 +22,12 @@ See task-01-evidence.md for actual commands, initial typecheck failure/correctio
 Pre-window development was explicitly requested by the owner and is disclosed in README. Requested model GPT-6.1 Sol / High / Standard; observed backend settings UNKNOWN.
 
 ## Publication checkpoint
-Pending the authorised repository creation, staged-file review, commit, push and remote verification. This section will be replaced with observed identities, not assumed success.
+- Public repository: https://github.com/Rachit168/hackcache-accountability
+- Owner verified as Rachit168; visibility public; default branch main.
+- Implementation commit, local and independently fetched remote main: `e4b4acd7e7582e1929fac591ed8aaaa4fdbad22e`.
+- Git push succeeded. Git ls-remote and GitHub API agreed with the local hash. Remote recursive tree contained 24 files, every selected expected file, and no forbidden generated/secret-bearing paths. Staged content pattern scan found no credential patterns. Such a scan is not exhaustive secret detection.
+- This handoff/evidence update follows that verified implementation checkpoint. Its own commit identity is returned in chat and can be resolved with `git rev-parse HEAD` / `git ls-remote origin refs/heads/main`; a file cannot embed its own eventual Git hash.
+- Generated browser screenshot: `qa/artifacts/task-01-browser-smoke.png` (local only, ignored). It is a narrow browser viewport, not a full mobile acceptance run.
+
+## Resource handoff checkpoint
+At 2026-10-23 12:58:18 UTC / 18:28:18 IST: five-hour USED 8%, weekly USED 9%. Start was 12:44:57 UTC / 18:14:57 IST at 0% / 8%; observed interval 13 minutes 21 seconds. Same reported reset identifiers: 1792777498 / 1793304810. The +8-point five-hour shared-account change reaches the pilot target; attribution to this task is not isolated. New feature implementation stopped; only evidence/publication finalisation followed. No paid/reset credits or model/speed changes used. Final response generation and this documentation commit occur after that checkpoint.

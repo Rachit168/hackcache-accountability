@@ -1,6 +1,6 @@
 # HC-P6-T01 — factual evidence
 
-Status: LOCAL_FOUNDATION_VERIFIED / CONNECTED_CHECKS_NOT_RUN. Self-checks only. No production, security-completeness, deployment or independent-acceptance claim.
+Status: LOCAL_FOUNDATION_VERIFIED / GITHUB_PUBLISHED / CONNECTED_CHECKS_NOT_RUN. Self-checks only. No production, security-completeness, deployment or independent-acceptance claim.
 
 ## Scope and provenance
 - Repository root: `D:\project\Hack Cache`. No app/ directory or planning material copied.
@@ -42,4 +42,6 @@ The connected runner implements these API/database checks using two real anonymo
 - Same-window observed change at checkpoint: +5 percentage points. Shared-account activity/rounding prevents isolated task attribution. No paid/reset credits used. Final publication/resource checkpoint is recorded in the handoff after remote verification.
 
 ## Publication
-GitHub identity verified through existing credential manager: Rachit168. Preferred repository lookup returned 404 before creation. Publication checkpoint and actual commit identities are recorded in docs/handoff.md after push; a local commit alone is not publication.
+GitHub identity verified through existing credential manager: Rachit168. Preferred repository lookup returned 404 before creation. Created https://github.com/Rachit168/hackcache-accountability (HTTP 201, public). Reviewed all 24 staged paths and ran a staged credential-pattern scan; no forbidden paths or matching credential patterns. Commit/push succeeded. Local HEAD, git ls-remote and remote GitHub main commit all matched `e4b4acd7e7582e1929fac591ed8aaaa4fdbad22e`. GitHub API confirmed owner/public/main and expected remote source files; generated artifacts and secret-bearing paths absent. This evidence update is a subsequent documentation commit; final HEAD identity is supplied in chat.
+
+Final recorded resource checkpoint: 12:58:18 UTC / 18:28:18 IST, five-hour USED 8%, weekly USED 9%, unchanged reset identifiers. Start-to-checkpoint observed interval 13m21s, shared five-hour change +8 pp, non-isolated attribution. Evidence/publication finalisation followed; no new product features were started.

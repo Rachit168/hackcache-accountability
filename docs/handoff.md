@@ -1,5 +1,15 @@
 # HC-P6 current handoff
 
+## Current handoff — HC-P6-B05-B guidance and private package
+
+Six bilingual informational cards link independently checked NALSA and CPGRAMS sources with verification date, scope and jurisdiction/eligibility limits. Gate A checkpoint `34fd150` preceded Gate B. CPGRAMS municipal applicability and legal-aid eligibility remain unknown; no deadlines, contacts, representation or completed government action are invented.
+
+Owners can explicitly download a bounded private ZIP of actual original concerns, response versions, timeline, disputes, evidence metadata, canonical ledger, guidance, printable escaped summary, file manifest and offline verification script. Evidence bytes default to omitted; selected files are individually reauthorised and rehashed. Reviewer/office/unrelated export access is denied. AI/human reviews remain unsaved and are NOT_CHECKED in export. No migration/grant/dependency change. History remains immutable; package hashes/head are unanchored commitments, not proof of truth or resolution.
+
+105 local tests / 20 files, typecheck/build and three real connected groups passed. Real selected-byte and omitted-byte ZIPs opened with Windows extraction and passed the standalone checker; disposable README tampering failed. Final browser owner download after authenticated reload also extracted/verified, and an actual NALSA source link opened. English/Hindi and effective 400px layout inspected. Local HTML rendering was blocked by browser policy, so printable rendering and browser evidence-checkbox download remain unverified. See [b05-b-evidence.md](b05-b-evidence.md) for exact artifacts, bounds, reproduction, default-browser download relocation and limits. No independent acceptance is claimed.
+
+**Next: release verification only** — public repository, deployment, deployed end-to-end smoke tests, working video and submission links. Do not start another feature or expand the audit interpretation into official findings.
+
 ## Current handoff — HC-P6-B05-A Resolution Audit Part 1
 
 Private read-only response coverage is implemented for owners and assigned reviewers. Every original concern is linked to a selected exact persisted office-response ID/version/text. OpenRouter returns only bounded coverage enums and exact quotations; unknown/missing/duplicate concern IDs and unsupported quotations are rejected. Fixed bilingual explanations distinguish textual coverage from actual resolution. Provider failure shows unclear/unverified sources plus explicit unsaved human review. Citizen disputes remain separate attributed statements and can label the linked concern Disputed by citizen. Source selection survives reload through the URL; interpretations and local human reviews are explicitly unsaved.

@@ -1,5 +1,5 @@
 import {commandFailure} from './workflow-state';
-export type EscalationView={policy:string;status:string;level?:number;authority?:string;deadline?:string;effectiveNow?:string;offsetHours?:number;canManage:boolean;claimedResolved?:boolean;independentlyResolved?:boolean;investigationReason?:string;history:{id:string;actor:string;operation:string;recordedAt:string;detail:{toLevel?:number;reason?:string;text?:string}}[]};
+export type EscalationView={policy:string;status:string;level?:number;authority?:string;deadline?:string;effectiveNow?:string;offsetHours?:number;canManage:boolean;claimedResolved?:boolean;independentlyResolved?:boolean;acknowledgementMissedEffectiveAt?:string|null;investigationReason?:string;history:{id:string;actor:string;operation:string;recordedAt:string;detail:{toLevel?:number;reason?:string;text?:string;acknowledgementMissed?:boolean;acknowledgementMissedEffectiveAt?:string|null}}[]};
 export type EscalationApi=<T>(path:string,init?:RequestInit)=>Promise<T>;
 export function escalationController(api:EscalationApi,id:string){
  let pending:{action:'evaluate'|'advance';key:string;confirmed:boolean}|undefined;let running=false;

@@ -1,5 +1,9 @@
 # HC-P6-B03 — bounded fictional escalation
 
+## Current correction status
+
+HC-P6-B03-C01 corrected two confirmed defects in additive migrations 010–012: late acknowledgement now preserves an overdue fictional milestone, and unchanged evaluations have a 20-per-level idempotency-record cap without ledger appends. Reproductions, fixes, connected/local evidence, transient failures and limits are recorded in [b03-c01-correction.md](b03-c01-correction.md). The original Gate A/B evidence below remains historical for those earlier commits.
+
 ## Gate A checkpoint
 
 **Gate A IMPLEMENTED; Gate B IMPLEMENTED and browser self-verified.** The mandatory verified backend checkpoint was committed as **73e3fba** before starting Gate B. Starting branch main / f2c49c56fb09a883c51b9b8fc0efd7d48c72e083; clean tree and matching remote main observed before edits. One owner, no delegation/model changes. All writes beneath D:\project\Hack Cache. No independent acceptance is claimed.

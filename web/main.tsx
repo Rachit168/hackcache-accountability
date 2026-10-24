@@ -155,7 +155,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   const [step,setStep] = useState(0);
   const [narrative, setNarrative] = useState('');
   const [concerns, setConcerns] = useState<Concern[]>(() => [
-    { uiId: crypto.randomUUID(), type: 'service', wording: '' }, { uiId: crypto.randomUUID(), type: 'conduct', wording: '' },
+    { uiId: crypto.randomUUID(), type: 'service', wording: '' },
   ]);
   const [declaration, setDeclaration] = useState(false);
   const [error, setError] = useState<CopyKey>();
@@ -381,7 +381,7 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
      <ol className="case-progress"><li className="complete"><span>✓</span><div><strong>{language==='hi'?'शिकायत दर्ज':'Record created'}</strong><small>{language==='hi'?'निजी रसीद उपलब्ध':'Private receipt available'}</small></div></li>
      <li className={responseCheck==='available'?'complete':''}><span>{responseCheck==='available'?'✓':'2'}</span><div><strong>{language==='hi'?'कार्यालय का जवाब':'Office response'}</strong><small>{responseCheck==='available'?(language==='hi'?'जवाब दर्ज है':'A response is recorded'):responseCheck==='missing'?(language==='hi'?'अभी जवाब दर्ज नहीं':'Not recorded yet'):responseCheck==='error'?(language==='hi'?'स्थिति नहीं जाँची जा सकी':'Could not verify status'):(language==='hi'?'स्थिति देखी जा रही है':'Checking status')}</small></div></li>
      <li className={responseCheck==='available'?'ready':''}><span>3</span><div><strong>{language==='hi'?'जवाब देखें और तुलना करें':'Read and compare'}</strong><small>{responseCheck==='available'?(language==='hi'?'अब जवाब खोल सकते हैं':'Available now'):(language==='hi'?'जवाब दर्ज होने पर खुलेगा':'Available after a recorded response')}</small></div></li></ol>
-     {responseCheck==='error'&&<button type="button" className="secondary-button" onClick={()=>setRetry(v=>v+1)}>{language==='hi'?'स्थिति फिर जाँचें':'Check response status again'}</button>}
+     {(responseCheck==='error'||responseCheck==='missing')&&<button type="button" className="secondary-button" onClick={()=>setRetry(v=>v+1)}>{language==='hi'?'नया जवाब देखें':'Check for a new reply'}</button>}
     </section>}
     {activePanel==='overview'&&<section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
       <ol className="saved-concerns">{loadedRecord.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>

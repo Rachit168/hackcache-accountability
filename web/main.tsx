@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -17,6 +17,7 @@ import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assist
 import {EscalationTimeline} from './escalation';
 import {safeFilename} from '../domain/intake-ai';
 import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
+import {operatorApiFor} from './operator-api';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -91,12 +92,7 @@ function App() {
     finally { setBusy(false); }
   }
 
-  const operatorApi=useCallback(async <T,>(path:string,init:RequestInit={})=>{
-    if(!operatorClient)throw new Error('operator session unavailable');
-    const {data}=await operatorClient.auth.getSession();
-    if(!data.session)throw new Error('operator authentication required');
-    return api<T>(path,{...init,headers:{...init.headers,Authorization:'Bearer '+data.session.access_token}});
-  },[operatorClient]);
+  const operatorApi=useMemo(()=>operatorApiFor(operatorClient,api),[operatorClient]);
 
   return <>
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>

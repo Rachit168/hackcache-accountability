@@ -1,6 +1,12 @@
 # HC-P6 current handoff
 
-## Current handoff — HC-P6-B01 evidence and verification
+## Current handoff — HC-P6-B02 incomplete resource checkpoint
+
+B02 has a working connected prepared/live OpenRouter path and persisted citizen-review backend. Migrations 006–008 are applied, preserving earlier records. The final intake check passed fictional audio, exact-fixture prepared report, citizen correction, atomic submission/replay, private provenance, reviewer flag/disposition, chain/display checks, and real OpenRouter transcription/report generation. 63 local tests, typecheck/build and current foundation connected checks passed. Provider secrets remain server-only and ignored.
+
+**B02 remains incomplete:** final browser journey, bilingual/390px inspection, recording and failure/stale-response checks, PDF/other-format checks and remaining flag/regression coverage are NOT RUN/incomplete. New implementation stopped at the required +12 observation (15% → 27%); only observed defect repairs and checkpoint work followed. See [b02-evidence.md](b02-evidence.md) for exact failures, private setup, supported formats, resource observations, reproduction and continuation. Do not claim completion or independent acceptance. Resume this B02 task directly without starting a separate architecture/polish phase.
+
+## Historical handoff — HC-P6-B01 evidence and verification
 
 Private evidence submission and honest record verification now work through the real dedicated backend. Migration 005 is applied; 001–004 and existing records are preserved. Private Storage, readback-hashed upload staging, atomic full-set finalization and manifest ledger events, authorized safe downloads, and per-file byte verification are implemented. Citizen/reviewer verification recomputes the chain and compares displayed narrative, ordered concerns and evidence manifest against commitments. Office and unrelated identities are denied raw evidence. Written-only behavior remains functional.
 

@@ -17,6 +17,7 @@ export async function transaction<T>(pool:pg.Pool,actor:string,work:(client:pg.P
 }
 export function caseStore(pool:pg.Pool) {
   return {
+    intakeCommand:(actor:string,operation:string,key:string,body:unknown)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.intake_command($1,$2,$3::jsonb) AS value',[operation,key,JSON.stringify(body)])).rows[0].value),
     evidenceStage:(actor:string,id:string,name:string,type:string,size:number,hash:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.evidence_stage($1,$2,$3,$4,$5) AS value',[id,name,type,size,hash])).rows[0].value),
     evidenceGet:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.evidence_get($1) AS value',[id])).rows[0].value),
     recordBundle:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.record_bundle($1) AS value',[id])).rows[0].value),

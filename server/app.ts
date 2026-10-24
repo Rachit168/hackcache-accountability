@@ -5,20 +5,40 @@ import type { configuration } from './config.js';
 import type { caseStore } from './database.js';
 import { complaintRequestLimitBytes } from './request-limits.js';
 import {evidenceLimits,fingerprint,privateStorage,validatedType} from './evidence.js';
-type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'>>;
+import {buildIntake} from './intake-ai.js';
+import {generationSchema,safeFilename} from '../domain/intake-ai.js';
+type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'|'intakeCommand'>>;
 type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>};
 export function createApp({config,store,verify}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
-  app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"});next();});
+  app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"});next();});
   app.use(express.json({limit:complaintRequestLimitBytes}));
   app.get('/api/health',(_req,res)=>res.json({status:'ok',configured:config.ready,stage:'task-01-foundation'}));
   app.get('/api/config',(_req,res)=>res.json(config.ready?{ready:true,url:config.url,publishableKey:config.key}:{ready:false,message:'Dedicated Supabase configuration is needed. No complaint can be submitted yet.'}));
+  app.get('/api/fixtures/intake.wav',(_req,res)=>res.type('audio/wav').sendFile(path.resolve('content/b02/fictional-report.wav')));
   app.use('/api',async(req,res,next)=>{
     const match=/^Bearer ([^\s]+)$/.exec(req.headers.authorization??'');
     if(!match){res.status(401).json({error:'Sign in with a managed citizen account.'});return;}
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
   });
+  const intakeBusy=new Set<string>();const intakeCounts=new Map<string,{start:number;count:number}>();
+  app.post('/api/intake/drafts',async(req,res,next)=>{
+    const key=uuidSchema.safeParse(req.get('Idempotency-Key')),input=generationSchema.safeParse(req.body);if(!key.success||!input.success){res.status(400).json({error:'Invalid intake request.'});return;}
+    const actor=res.locals.actor;try{
+      const prior=await store!.intakeCommand!(actor,'find',key.data,{});if(prior){if(JSON.stringify(prior.body.request)!==JSON.stringify(input.data)){/* Compare normalized JSON objects independent of key order. */const a=prior.body.request;if(a.text!==input.data.text||a.mode!==input.data.mode||JSON.stringify(a.evidenceIds)!==JSON.stringify(input.data.evidenceIds)){res.status(409).json({error:'Intake key conflict.'});return;}}res.json(prior);return;}
+      const now=Date.now();let budget=intakeCounts.get(actor);if(!budget||now-budget.start>600000){budget={start:now,count:0};if(intakeCounts.size>=256)intakeCounts.delete(intakeCounts.keys().next().value!);intakeCounts.set(actor,budget);}
+      if(intakeBusy.has(actor)||intakeBusy.size>=2||budget.count>=6){res.status(429).json({error:'PROCESSING_BUSY_OR_RATE_LIMITED'});return;}budget.count++;intakeBusy.add(actor);
+      try{const result=await buildIntake(config,store as ReturnType<typeof caseStore>,actor,res.locals.token,input.data);res.status(201).json(await store!.intakeCommand!(actor,'save',key.data,result));}finally{intakeBusy.delete(actor);}
+    }catch(error){next(error);}
+  });
+  app.post('/api/intake/:id/review',async(req,res,next)=>{
+    const id=uuidSchema.safeParse(req.params.id),key=uuidSchema.safeParse(req.get('Idempotency-Key')),version=complaintSchema.omit({intakeReviewId:true}).safeParse(req.body);
+    if(!id.success||!key.success||!version.success){res.status(400).json({error:'Review the valid complete complaint.'});return;}
+    try{res.status(201).json(await store!.intakeCommand!(res.locals.actor,'review',key.data,{draftId:id.data,version:version.data}));}catch(error){next(error);}
+  });
+  app.get('/api/intake/cases/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(await store!.intakeCommand!(res.locals.actor,'read',id.data,{caseId:id.data}));}catch(e){next(e);}});
+  app.post('/api/intake/cases/:id/disposition',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id),key=uuidSchema.safeParse(req.get('Idempotency-Key'));if(!id.success||!key.success||!req.body||Object.keys(req.body).sort().join(',')!=='reason,status'){res.status(400).json({error:'Invalid disposition.'});return;}try{res.status(201).json(await store!.intakeCommand!(res.locals.actor,'disposition',key.data,{caseId:id.data,...req.body}));}catch(e){next(e);}});
   let evidenceRequests=0;
   app.use('/api/evidence',(_req,res,next)=>{if(evidenceRequests>=2){res.status(503).json({error:'Evidence service busy. Retry.'});return;}evidenceRequests++;let ended=false;const release=()=>{if(!ended){ended=true;evidenceRequests--;}};res.once('finish',release);res.once('close',release);next();});
   app.post('/api/evidence',express.raw({type:'application/octet-stream',limit:evidenceLimits.fileBytes}),async(req,res,next)=>{
@@ -39,7 +59,7 @@ export function createApp({config,store,verify}:Dependencies) {
       const file=await store!.evidenceGet!(res.locals.actor,id.data);
       const bytes=await privateStorage(config.url!,config.key!,res.locals.token).read(file.object_path);
       if(req.params.action==='verify'){res.json({id:id.data,state:bytes.length===file.byte_count&&fingerprint(bytes)===file.sha256?'verified':'mismatch'});return;}
-      res.set({'Content-Type':'application/octet-stream','Content-Disposition':"attachment; filename=\"evidence\"; filename*=UTF-8''"+encodeURIComponent(file.display_name),'Content-Security-Policy':"sandbox; default-src 'none'"});res.send(bytes);
+      res.set({'Content-Type':'application/octet-stream','Content-Disposition':"attachment; filename=\"evidence\"; filename*=UTF-8''"+encodeURIComponent(safeFilename(file.display_name)),'Content-Security-Policy':"sandbox; default-src 'none'"});res.send(bytes);
     }catch(error){next(error);}
   });
   app.get('/api/records/:id',async(req,res,next)=>{
@@ -71,6 +91,8 @@ export function createApp({config,store,verify}:Dependencies) {
   app.use(express.static(path.resolve('dist/web')));
   app.get('/{*path}',(_req,res)=>res.sendFile(path.resolve('dist/web/index.html')));
   app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{
+    const intakeCode=(error as {intakeCode?:string}).intakeCode;
+    if(intakeCode){res.status(intakeCode==='SOURCE_DENIED'?403:503).json({error:intakeCode});return;}
     const code=(error as {code?:string}).code;
     if(code==='42501'){res.status(403).json({error:'Denied.'});return;}
     if(code==='22023'||code==='22P02'){res.status(400).json({error:'Invalid workflow content or transition.'});return;}

@@ -12,6 +12,8 @@ import './style.css';
 import { StaffSession, WorkflowWorkspace } from './workflow';
 import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
+import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assistant';
+import {safeFilename} from '../domain/intake-ai';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -30,7 +32,7 @@ async function api<T = { error?: string }>(path: string, init: RequestInit = {})
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.data.session?.access_token ?? ''}`, ...init.headers },
     });
   } catch { throw new ApiError(0, 'network'); }
-  if(response.ok&&response.headers.get('Content-Disposition')?.startsWith('attachment')){const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='evidence';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return undefined as T;}
+  if(response.ok&&response.headers.get('Content-Disposition')?.startsWith('attachment')){const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;const encoded=response.headers.get('Content-Disposition')?.split("filename*=UTF-8''")[1];link.download=safeFilename(encoded?decodeURIComponent(encoded):'evidence');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return undefined as T;}
   const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new ApiError(response.status, body.error ?? 'request');
   return body;
@@ -126,10 +128,14 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   const [attempt, setAttempt] = useState(false);
   const [evidenceIds,setEvidenceIds]=useState<string[]>([]);
   const [evidenceReady,setEvidenceReady]=useState(true);
+  const [assistantIds,setAssistantIds]=useState<string[]>([]);
+  const [intakeDraft,setIntakeDraft]=useState<string>();
+  const reviewKey=useRef(crypto.randomUUID());
+  const allEvidenceIds=[...new Set([...evidenceIds,...assistantIds])];
   const [summaryFocus, setSummaryFocus] = useState(0);
   const summaryRef = useRef<HTMLElement>(null);
   const submitted = useRef(false);
-  const payload = { narrative, office: 'SAMPLE_MUNICIPAL_DESK', category: 'SAMPLE_MUNICIPAL_SERVICE', concerns: concerns.map(({ type, wording }) => ({ type, wording })), declaration, ...(evidenceIds.length?{evidenceIds}:{}) };
+  const payload = { narrative, office: 'SAMPLE_MUNICIPAL_DESK', category: 'SAMPLE_MUNICIPAL_SERVICE', concerns: concerns.map(({ type, wording }) => ({ type, wording })), declaration, ...(allEvidenceIds.length?{evidenceIds:allEvidenceIds}:{}) };
   const locale = language === 'hi' ? 'hi-IN' : 'en-IN';
   const summaryItems = fieldErrorSummary(fieldErrors, concerns);
   const shouldWarn = shouldWarnOnLeave(narrative, concerns, declaration, submitted.current);
@@ -168,7 +174,8 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
     }
     setFieldErrors({}); setBusy(true); setAttempt(true);
     try {
-      const receipt = await api<{ id: string }>('/complaints', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(parsed.data) });
+      const review=intakeDraft?await api<{id:string}>('/intake/'+intakeDraft+'/review',{method:'POST',headers:{'Idempotency-Key':reviewKey.current},body:JSON.stringify(parsed.data)}):undefined;
+      const receipt = await api<{ id: string }>('/complaints', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({...parsed.data,...(review?{intakeReviewId:review.id}:{})}) });
       submitted.current = true;
       navigate(`/cases/${receipt.id}`);
     } catch { setError('submitError'); }
@@ -212,6 +219,8 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
       <EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
+      <IntakeAssistant api={api} language={language} text={narrative} evidenceIds={allEvidenceIds} disabled={!enabled||busy||attempt||!evidenceReady} onSource={id=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();setNarrative(draft.body.report.allegation.value);setConcerns(draft.body.report.concerns.map(c=>({uiId:crypto.randomUUID(),type:c.type,wording:c.field.value})));setDeclaration(false);}}/>
+      {intakeDraft&&<p role="status">{language==='hi'?'AI संस्करण चुना गया है। अपने सुधार करें और भेजने से पहले घोषणा की पुष्टि करें।':'AI revision selected. Make your corrections and confirm the declaration before submission. Citizen additions and edits carry no invented AI citations.'}</p>}
       {!evidenceReady&&<p role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
       <section className="form-section submit-section" aria-labelledby="review-title">
         <h2 id="review-title">{t('reviewTitle')}</h2>
@@ -299,6 +308,7 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
     {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
     <RecordVerification api={api} language={language} id={loadedRecord.id}/>
+    <IntakeProvenance api={api} language={language} id={loadedRecord.id}/>
     <WorkflowWorkspace api={api} language={language} caseId={id}/>
   </article>;
 }

@@ -38,7 +38,7 @@ export function EvidenceUpload({api,language,disabled,onChange}:{api:Api;languag
  return <section className="form-section" aria-labelledby="evidence-upload-title">
   <h2 id="evidence-upload-title">{hi?'निजी साक्ष्य (वैकल्पिक)':'Private evidence (optional)'}</h2>
   <p className="section-intro">{hi?'फ़ाइल चुनते ही निजी अपलोड शुरू होगा।':'Select a file to start its private upload automatically.'}</p>
-  <p className="field-help">{hi?'अधिकतम 5 फ़ाइलें, कुल 30 MiB, प्रत्येक 8 MiB। JPG/PNG, PDF/TXT, WAV/MP3/Ogg, WebM/MP4। केवल काल्पनिक डेटा दें।':'Up to 5 files, 30 MiB total, 8 MiB each. JPG/PNG, PDF/TXT, WAV/MP3/Ogg, WebM/MP4. Fictional data only.'}</p>
+  <p className="field-help">{hi?'अधिकतम 5 फ़ाइलें, कुल 30 MiB, प्रत्येक 8 MiB। JPG/PNG, PDF/TXT, WAV/MP3/Ogg, WebM/MP4। केवल काल्पनिक डेटा दें।':'Up to 5 files, 30 MiB total, 8 MiB each. JPG/PNG, PDF/TXT, WAV/MP3/Ogg, WebM/MP4. Fictional data only. Text files must be ordinary UTF-8 plain text, not HTML or disguised binary.'}</p>
   <p className="field-help">{hi?'फ़ाइल अपलोड सत्यता या सुरक्षा प्रमाणित नहीं करता। वीडियो के दृश्य भाग का AI विश्लेषण नहीं होगा।':'An upload does not establish authenticity or safety. AI processing does not analyse video images.'}</p>
   <label className="upload-picker"><strong>{hi?'फ़ाइल चुनें या रिकॉर्डिंग जोड़ें':'Choose files or add a recording'}</strong><span>{hi?'अपने फ़ोन या कंप्यूटर से चुनें':'Select from your phone or computer'}</span>
    <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.txt,.wav,.mp3,.ogg,.webm,.mp4,audio/*,video/webm,video/mp4" disabled={disabled||working} onChange={event=>{select(Array.from(event.currentTarget.files??[]));event.currentTarget.value='';}}/>

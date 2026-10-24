@@ -268,7 +268,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
             <div className="concern-actions">{concerns.length > 1 && <button type="button" className="remove-concern" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}><span aria-hidden="true">×</span> {t('removeConcern')} {index + 1}</button>}</div>
           </fieldset>;
         })}
-        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }><span aria-hidden="true">＋</span> {t('addConcern')}</button>
+        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}><span aria-hidden="true">＋</span> {t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
       <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>

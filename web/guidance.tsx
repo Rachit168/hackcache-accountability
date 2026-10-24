@@ -22,7 +22,7 @@ export function Guidance({language}:{language:Language}){
      </button>
      <a className="source-link" href={c.url} target="_blank" rel="noopener noreferrer">{hi?'आधिकारिक स्रोत खोलें':'Visit official source'} <span aria-hidden="true">↗</span></a>
     </div>
-    {expanded.includes(c.id)&&<div className="guidance-expanded" id={'guidance-'+c.id}><h4>{hi?'इस स्रोत से क्या पता चलता है':'What the source establishes'}</h4><p>{c.establishes[language]}</p><h4>{hi?'ध्यान रखने की सीमाएँ':'Important limits'}</h4><p>{c.limits[language]}</p><small>{hi?'स्रोत जाँचा गया':'Source checked'}: {c.verified}</small></div>}
+    <div className="guidance-expanded" id={'guidance-'+c.id} hidden={!expanded.includes(c.id)}><h4>{hi?'इस स्रोत से क्या पता चलता है':'What the source establishes'}</h4><p>{c.establishes[language]}</p><h4>{hi?'ध्यान रखने की सीमाएँ':'Important limits'}</h4><p>{c.limits[language]}</p><small>{hi?'स्रोत जाँचा गया':'Source checked'}: {c.verified}</small></div>
    </div>
   </article>)}</div>
  </section>;

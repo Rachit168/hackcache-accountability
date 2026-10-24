@@ -1,5 +1,11 @@
 # HC-P6 current handoff
 
+## Current handoff — HC-P6-B04-A
+
+Additive migration 013 is applied. Owners can record one immutable dispute against an exact existing office response/version or explicitly simulated closure claim, preserving authored reason, optional original-concern/attached-evidence references and server time in the canonical ledger transaction. Assigned reviewers read the private record; office/unrelated identities are denied. This is an internal record, with no government appeal filing/acceptance or legal-procedure claim. Compact English/Hindi citizen/reviewer UI, retry identity and confirmed-readback handling are implemented.
+
+Backend checkpoint 72819bf preceded the browser journey. Four connected groups (including two real PostgreSQL sessions with blocking, private TXT reference, retries/conflicts, invalid/cross-case references, rollback, preservation and canonical verification), expanded foundation/permission checks, 91 local tests, typecheck and production build passed. The production browser citizen submitted and reloaded a dispute; assigned reviewer readback survived reload with no submit controls; Hindi/narrow 400px screens were inspected. See [b04-a-evidence.md](b04-a-evidence.md) for exact commands, observed failures, limits and screenshots. No independent acceptance is claimed. Next: scope the future three-part Resolution Audit against these structured records; official appeal integration and adjudication remain deferred.
+
 ## Current correction handoff — HC-P6-B03-C01
 
 Both independent findings are confirmed and fixed with additive migrations 010–012. Late reviewer/municipal acknowledgement retains the missed DEMO-ESC-1 24-hour milestone; no-op evaluation request records are capped at 20 per case per level and do not append complaint-ledger entries. Meaningful transitions, same-key idempotency, conflicting-key rejection, transaction serialization, existing permissions and history remain intact. Final checks: 10 escalation-connected assertion groups, integration/permission check, 89 local tests, typecheck and production build passed. See [b03-c01-correction.md](b03-c01-correction.md) for failing-before evidence, reproduction commands, intermediate corrections and remaining limits. This is self-verification, not independent acceptance; B04 remains separately scoped.

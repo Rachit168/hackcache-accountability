@@ -1,6 +1,16 @@
 # HC-P6 current handoff
 
-## Current handoff — HC-P6-B02 incomplete resource checkpoint
+## Current handoff — HC-P6-B02 implemented and self-verified
+
+The real citizen → private source → live OpenRouter transcript/report → explicit Apply/correction → atomic submission → reload → owner/reviewer provenance journey now works. Browser case 56a6c1e0-f161-45b7-b11d-f574443a866f retains the Monday AI version, separate Tuesday citizen correction, WAV and browser-created WebM. Owner/reviewer chain/display/actual-byte verification passed. The reviewer recorded an attributed Not misuse reason; unrelated citizen/office private-artifact requests returned 403. Exact-fixture prepared labeling/rejection, written-only submission, recording/playback/upload retry, controlled denial/interruption/discard/size errors, English/Hindi and 390px inspection were checked.
+
+Final local checks: **78 tests / 14 files, typecheck and production build passed**. Fresh intake, evidence and office/workflow connected suites passed; real private TXT/PDF extraction/report and PNG text extraction/report passed. Invalid live citations were rejected before explicit successful retry. Final label-only build/receipt was reloaded and inspected; no automatic prepared fallback exists. Migrations 006–008 remain applied; no new migration/security-policy change in this continuation.
+
+OpenRouter is server-only, configured through ignored .env. Supported processing: text, text-bearing PDF, WAV/MP3/Ogg/WebM audio, JPEG/PNG legible text (4 MiB image cap). Visual-video/scene analysis is unsupported. Ogg/JPEG adapters have controlled-provider tests; physical devices/permissions and assistive-technology acceptance are not claimed. Controls are per process; citations/hashes do not prove truth; an unanchored chain can be rewritten by a privileged operator. See [b02-evidence.md](b02-evidence.md) for actual failures, limits, exact commands, screenshot locations and resource observations. No further private setup is required. B02 is ready to retain for continued development; no independent acceptance is claimed. Publication hash is supplied in chat.
+
+The owner explicitly overrode B02's usage stop after this continuation paused at the 44% observation (31% baseline). All work stayed beneath D:\project\Hack Cache, with one owner, no model/speed changes, delegation or reset-credit use.
+
+## Historical handoff — HC-P6-B02 incomplete resource checkpoint
 
 B02 has a working connected prepared/live OpenRouter path and persisted citizen-review backend. Migrations 006–008 are applied, preserving earlier records. The final intake check passed fictional audio, exact-fixture prepared report, citizen correction, atomic submission/replay, private provenance, reviewer flag/disposition, chain/display checks, and real OpenRouter transcription/report generation. 63 local tests, typecheck/build and current foundation connected checks passed. Provider secrets remain server-only and ignored.
 

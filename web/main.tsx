@@ -250,17 +250,24 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         {concerns.map((concern, index) => {
           const field = concern.uiId; const errorId = `${field}-error`; const wordingId = `${field}-wording`;
           return <fieldset className="concern" key={field}>
-            <legend className="concern-legend"><span>{t('concern')} {index + 1}</span><label className="type-control"><span className="sr-only">{t('concernType', { n: index + 1 })}</span><select aria-label={t('concernType', { n: index + 1 })} value={concern.type} disabled={busy||attempt} onChange={(event) => { changed(); updateConcern(field, { type: event.target.value as ConcernType }); }}>
-              <option value="service">{language==='hi'?'सेवा, देरी या जानकारी':'Service, delay or information'}</option><option value="conduct">{language==='hi'?'कर्मचारी का व्यवहार':'Staff behaviour'}</option><option value="mixed">{language==='hi'?'दोनों':'Both'}</option>
-            </select></label></legend>
+            <legend className="concern-legend"><span>{language==='hi'?'मुद्दा':'Issue'} {index+1}</span></legend>
+            <div className="issue-type"><p className="field-label" id={field+'-type'}>{language==='hi'?'इस मुद्दे के बारे में बताएँ':'What is this about?'}</p>
+             <div className="choice-row" role="radiogroup" aria-labelledby={field+'-type'}>{([
+              ['service',language==='hi'?'सेवा या देरी':'Service or delay'],
+              ['conduct',language==='hi'?'व्यवहार':'Staff behaviour'],
+              ['mixed',language==='hi'?'दोनों':'Both']
+             ] as [ConcernType,string][]).map(([kind,label])=><label className="choice-pill" key={kind}>
+              <input type="radio" name={'type-'+field} value={kind} checked={concern.type===kind} disabled={busy||attempt} onChange={()=>{changed();updateConcern(field,{type:kind});}}/><span>{label}</span>
+             </label>)}</div>
+            </div>
             <p className="field-help type-help">{t(`${concern.type}Help` as CopyKey)}</p>
             <label className="field-label" htmlFor={wordingId}>{language==='hi'?'इस मुद्दे को अपने शब्दों में लिखें':'Describe this issue in your own words'}</label>
             <textarea id={wordingId} aria-describedby={fieldErrors[field] ? errorId : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy||attempt} onChange={(event) => { changed(field); updateConcern(field, { wording: event.target.value }); }} placeholder={t('wordingPlaceholder')} />
             {fieldErrors[field] && <p className="field-error" id={errorId}>{t(fieldErrors[field])}</p>}
-            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}>{t('removeConcern')} {index + 1}</button>}</div>
+            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="remove-concern" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}><span aria-hidden="true">×</span> {t('removeConcern')} {index + 1}</button>}</div>
           </fieldset>;
         })}
-        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}>{t('addConcern')}</button>
+        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }><span aria-hidden="true">＋</span> {t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
       <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>

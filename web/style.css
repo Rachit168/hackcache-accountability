@@ -188,3 +188,49 @@ footer { display: flex; justify-content: space-between; gap: 16px; padding: 16px
   .saved-concerns li, .saved-account { break-inside: avoid; }
 }
  .evidence-file {overflow-wrap:anywhere;margin-block:1rem;}
+
+/* Step-by-step citizen journey: preserve mounted form and upload state between steps. */
+.wizard-layout{grid-template-columns:minmax(0,770px) minmax(220px,1fr);}
+.wizard-progress ol{list-style:none;margin:0;padding:0;display:grid;gap:8px;}
+.wizard-progress li{min-width:0;}
+.wizard-progress button{display:flex;width:100%;gap:12px;align-items:center;text-align:left;min-height:48px;padding:10px 12px;background:transparent;color:var(--ink);border:1px solid transparent;border-radius:9px;font-weight:560;}
+.wizard-progress button.current{background:#e7eeea;border-color:#a2bcb6;color:#104844;font-weight:700;}
+.wizard-progress button.complete{color:#20655f;}
+.wizard-progress button:disabled{opacity:1;color:var(--muted);cursor:default;}
+.step-number{flex:0 0 auto;display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#e5e7e4;color:#334f50;font-size:13px;font-weight:700;}
+.current .step-number{background:#126c68;color:#fff;}
+.complete .step-number{background:#d3e9df;color:#155d4d;}
+.wizard-stage-heading{padding:22px 27px 17px;background:#f9faf6;border-bottom:1px solid #e3e8e3;}
+.wizard-stage-heading p{margin:0 0 4px;font-size:13px;font-weight:700;color:#235d58;}
+.wizard-stage-heading h2{font-size:25px;margin:0;color:#183b3a;line-height:1.2;}
+.wizard-stage-heading span{display:block;margin-top:8px;color:var(--muted);font-size:13px;}
+.form-surface [data-wizard-stage]{display:none;}
+.form-surface[data-wizard-step="0"] [data-wizard-stage="0"],
+.form-surface[data-wizard-step="1"] [data-wizard-stage="1"],
+.form-surface[data-wizard-step="2"] [data-wizard-stage="2"],
+.form-surface[data-wizard-step="3"] [data-wizard-stage="3"]{display:block;}
+.wizard-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #e3e8e3;padding:18px 27px;}
+.wizard-actions>button:last-child{margin-left:auto;}
+.wizard-actions .secondary-button{margin-top:0;}
+.wizard-evidence .form-section{padding:22px 27px;}
+.wizard-evidence .form-section+.form-section{border-top:1px solid #e3e8e3;}
+.upload-picker{display:grid;gap:7px;margin-top:15px;padding:16px;border:1px dashed #7caaa2;border-radius:10px;background:#f6faf7;color:var(--ink);}
+.upload-picker strong{font-size:15px;}
+.upload-picker span{font-size:13px;color:var(--muted);}
+.upload-picker input{width:100%;max-width:100%;font-size:14px;}
+.evidence-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px;}
+.evidence-file{border:1px solid var(--line);border-radius:9px;padding:12px;background:#fff;}
+.evidence-file-main{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.evidence-file-main strong{max-width:100%;overflow-wrap:anywhere;font-size:14px;}
+.evidence-file-main span{white-space:nowrap;font-size:13px;color:var(--muted);}
+.evidence-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.upload-state{display:block;font-size:13px;padding:5px 0;}
+.upload-ready{color:#21633d;}
+.upload-failed{color:#a12818;font-weight:700;}
+.review-recap{padding:13px 16px;border:1px solid #e2e8e0;border-radius:9px;background:#f8faf6;overflow-wrap:anywhere;}
+.review-recap h3{margin:0 0 6px;font-size:16px;}
+.review-recap p{margin:8px 0;}
+.review-recap ol{padding-left:20px;}
+@media(max-width:860px){.wizard-layout{grid-template-columns:minmax(0,1fr);} .wizard-progress ol{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;} .wizard-progress button{gap:5px;flex-direction:column;text-align:center;font-size:12px;padding:8px 4px;line-height:1.3;} .wizard-stage-heading{padding:20px;} .wizard-stage-heading h2{font-size:23px;}}
+@media(max-width:560px){.wizard-stage-heading{padding:18px 16px;}.wizard-actions{padding:16px;}.wizard-evidence .form-section{padding:18px 16px;}.wizard-progress button{font-size:11px;}.upload-picker{padding:12px;}}
+@media print{.wizard-progress,.wizard-actions{display:none!important;}}

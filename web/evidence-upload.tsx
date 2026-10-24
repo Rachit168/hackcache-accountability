@@ -1,7 +1,7 @@
 import React,{useRef,useState} from 'react';
 import type {Language} from './i18n';
 import {fileSize} from '../domain/intake-ai';
-type Item={key:string;file:File;state:'selected'|'uploading'|'ready'|'failed';id?:string};
+type Item={key:string;file:File;state:'selected'|'uploading'|'ready'|'failed';id?:string;failure?:string};
 type Api=<T>(path:string,init?:RequestInit)=>Promise<T>;
 const MAX_FILES=5,MAX_BYTES=8*1024*1024,MAX_TOTAL=30*1024*1024;
 const allowed=/\.(?:jpe?g|png|pdf|txt|wav|mp3|ogg|webm|mp4)$/i;
@@ -16,7 +16,7 @@ export function EvidenceUpload({api,language,disabled,onChange}:{api:Api;languag
    const result=await api<{id:string}>('/evidence',{method:'POST',headers:{'Content-Type':'application/octet-stream','Idempotency-Key':item.key,'X-Evidence-Name':encodeURIComponent(item.file.name)},body:item.file});
    if(!result?.id)throw Error('Unconfirmed upload');
    if(itemsRef.current.some(v=>v.key===item.key))change(item.key,{id:result.id,state:'ready'});
-  }catch{if(itemsRef.current.some(v=>v.key===item.key))change(item.key,{state:'failed'});}
+  }catch(error){if(itemsRef.current.some(v=>v.key===item.key)){const status=(error as {status?:number})?.status;const code=status===413?'size':status===400?'format':status===401?'login':status===403?'access':status===409?'uncertain':status===0?'network':'service';change(item.key,{state:'failed',failure:code});}}
  }
  async function flush(){
   if(processing.current)return;
@@ -47,7 +47,7 @@ export function EvidenceUpload({api,language,disabled,onChange}:{api:Api;languag
   <p role="status" className="field-help" aria-live="polite">{working?(hi?'निजी अपलोड जारी है। पूरा होने दें।':'Uploading privately. Complete uploads before continuing.'):success?(hi?String(success)+' फ़ाइलें तैयार हैं।':String(success)+' uploaded file(s) ready.'):(hi?'अभी कोई साक्ष्य नहीं जोड़ा।':'No evidence added yet.')}</p>
   {!!items.length&&<ul className="evidence-list">{items.map(item=><li className="evidence-file" key={item.key}>
    <div className="evidence-file-main"><strong className="preserve">{item.file.name}</strong><span>{fileSize(item.file.size)}</span></div>
-   <span role="status" className={'upload-state upload-'+item.state}>{({selected:hi?'प्रतीक्षा में':'Queued',uploading:hi?'अपलोड जारी है…':'Uploading…',ready:hi?'अपलोड की पुष्टि हुई':'Upload confirmed',failed:hi?'अपलोड असफल या अपुष्ट':'Upload failed or unconfirmed'})[item.state]}</span>
+   <span role="status" className={'upload-state upload-'+item.state}>{({selected:hi?'प्रतीक्षा में':'Queued',uploading:hi?'अपलोड जारी है…':'Uploading…',ready:hi?'अपलोड की पुष्टि हुई':'Upload confirmed',failed:hi?'अपलोड असफल या अपुष्ट':'Upload failed or unconfirmed'})[item.state]}</span>{item.state==='failed'&&<p role="alert" className="field-help">{({size:hi?'फ़ाइल बहुत बड़ी है।':'File too large.',format:hi?'फ़ाइल का प्रकार या नाम स्वीकार नहीं हुआ।':'File type or name was rejected.',login:hi?'सत्र समाप्त हुआ। उसी खाते में दोबारा जुड़ें।':'Session expired. Reconnect using the same identity.',access:hi?'अपलोड की अनुमति नहीं मिली।':'Upload access denied.',uncertain:hi?'पुरानी अपलोड स्थिति स्पष्ट नहीं है। इसी फ़ाइल से पुनः प्रयास करें।':'Previous upload outcome is uncertain. Retry the same file.',network:hi?'इंटरनेट कनेक्शन जाँचें, फिर प्रयास करें।':'Network unavailable. Check connection and retry.',service:hi?'सेवा उपलब्ध नहीं है। फिर प्रयास करें।':'Service unavailable. Retry later.'} as Record<string,string>)[item.failure??'service']}</p>
    <div className="evidence-actions">{item.state==='failed'&&<button type="button" className="secondary-button" disabled={disabled||working} onClick={()=>{change(item.key,{state:'selected'});void flush();}}>{hi?'उसी अपलोड का पुनः प्रयास':'Retry same upload'}</button>}
     <button type="button" className="text-button" disabled={disabled||working} onClick={()=>{publish(itemsRef.current.filter(v=>v.key!==item.key));setIssue(null);}}>{hi?'हटाएँ':'Remove'}</button></div>
   </li>)}</ul>}

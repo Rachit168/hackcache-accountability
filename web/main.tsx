@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { complaintSchema, type CaseRecord } from '../domain/complaint';
 import { initialLanguage, translate, type CopyKey, type Language } from './i18n';
@@ -9,6 +9,7 @@ import { createReceiptRecovery } from './receipt-recovery';
 import { attachLeaveWarning, copyExactReference, fieldErrorSummary, shouldWarnOnLeave } from './form-usability';
 import type { FormError } from './form-types';
 import './style.css';
+import {Welcome,FindCase} from './welcome';
 import { StaffSession, WorkflowWorkspace } from './workflow';
 import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
@@ -86,11 +87,12 @@ function App() {
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>
     <header className="site-header">
       <Link to="/" className="brand" aria-label={t('brandHome')}><span className="brand-mark" aria-hidden="true">ज</span><span>Janvaani</span></Link>
-      <div className="header-tools"><nav aria-label={t('workspace')}><Link to="/">{t('workspace')}</Link><a href="#privacy">{t('privacy')}</a></nav><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
+      <div className="header-tools"><nav aria-label={t('workspace')}><Link to="/">{language==='hi'?'होम':'Home'}</Link><Link to="/file">{language==='hi'?'शिकायत दर्ज करें':'File a complaint'}</Link><Link to="/staff">{language==='hi'?'कार्यालय डेमो':'Staff demo'}</Link></nav><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
     </header>
     <main>
       <Routes>
-        <Route path="/" element={<>
+        <Route path="/" element={<Welcome language={language} setLanguage={setLanguage} signedIn={signedIn} ready={!!config?.ready} onStart={()=>void signIn()} busy={busy}/>} />
+        <Route path="/file" element={<>
           <div className="page-heading"><p className="sample-label">{t('desk')}</p><h1>{t('fileTitle')}</h1><p>{t('fileIntro')}</p></div>
           {!config ? error ? <section className="notice" role="alert"><h2>{t('unavailable')}</h2><p>{t(error)}</p><button type="button" onClick={retryConfig}>{t('retry')}</button></section> : <p className="live-message" role="status">{t('connecting')}</p>
             : !config.ready ? <section className="notice" role="status" aria-labelledby="setup-title"><h2 id="setup-title">{t('setupTitle')}</h2><p>{t('setupBody')}</p><button type="button" onClick={retryConfig}>{t('retry')}</button></section>
@@ -99,6 +101,7 @@ function App() {
           {error && config && <p className="error" role="alert">{t(error)}</p>}
           <ComplaintForm enabled={signedIn && !!config?.ready} language={language} t={t} />
         </>} />
+        <Route path="/cases" element={<FindCase language={language}/>} />
         <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
         <Route path="/staff" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
         <Route path="/staff/:id" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
@@ -247,6 +250,12 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
 
 function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: boolean; language: Language; t: Translator }) {
   const { id } = useParams();
+  const [caseParams,setCaseParams] = useSearchParams();
+  const allowedPanels=['overview','evidence','timeline','response','audit','next'] as const;
+  type CasePanel=typeof allowedPanels[number];
+  const requested=caseParams.get('section');
+  const activePanel:CasePanel=allowedPanels.includes(requested as CasePanel)?requested as CasePanel:'overview';
+  const switchPanel=(panel:CasePanel)=>{const params=new URLSearchParams(caseParams);params.set('section',panel);setCaseParams(params);window.scrollTo({top:0,behavior:'instant'});};
   const [record, setRecord] = useState<CaseRecord>();
   const [state, setState] = useState<'loading' | 'ready' | 'not-found' | 'unavailable' | 'auth-error'>('loading');
   const [loadedId, setLoadedId] = useState<string>();
@@ -310,18 +319,19 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     });
     setCopyState(copied ? 'success' : 'failure');
   }
-  return <article className="receipt" aria-labelledby="receipt-title">
-    <div className="receipt-heading"><p className="sample-label">{t('desk')}</p><h1 id="receipt-title">{t('receiptTitle')}</h1><span className="status">{t('receiptStatusSubmitted')}</span></div>
+  return <article className="receipt case-dashboard" aria-labelledby="receipt-title">
+    <div className="receipt-heading"><p className="sample-label">{language==='hi'?'आपका निजी केस':'Your private case'} · {t('desk')}</p><h1 id="receipt-title">{language==='hi'?'शिकायत की जानकारी':'Your complaint'}</h1><span className="status">{t('receiptStatusSubmitted')}</span><p className="receipt-lead">{language==='hi'?'यह मामला केवल काल्पनिक प्रदर्शन में दर्ज है। हर भाग को अलग खोलें।':'This case is recorded in the fictional demo only. Choose what you want to review below.'}</p></div>
     <dl className="receipt-meta"><div><dt>{t('reference')}</dt><dd className="reference" id="case-reference">{loadedRecord.id}</dd></div><div><dt>{t('submitted')}</dt><dd><time dateTime={loadedRecord.submittedAt}>{new Date(loadedRecord.submittedAt).toLocaleString(locale)}</time></dd></div><div><dt>{t('office')}</dt><dd>{t('desk')}</dd></div></dl>
-    <section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
+    <nav className="case-tabs" aria-label={language==='hi'?'केस का मेनू':'Case navigation'}>{([['overview',language==='hi'?'सारांश':'Overview'],['evidence',language==='hi'?'साक्ष्य':'Evidence'],['timeline',language==='hi'?'समयक्रम':'Timeline'],['response',language==='hi'?'कार्यालय जवाब':'Office reply'],['audit',language==='hi'?'जवाब जाँच':'Response check'],['next',language==='hi'?'अगला कदम':'Next steps']] as [CasePanel,string][]).map(([key,label])=><button key={key} type="button" className={activePanel===key?'active':''} aria-current={activePanel===key?'page':undefined} onClick={()=>switchPanel(key)}>{label}</button>)}</nav>
+    {activePanel==='overview'&&<section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
       <ol className="saved-concerns">{loadedRecord.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>
     </section>
     <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
     {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
-    <RecordVerification api={api} language={language} id={loadedRecord.id}/>
-    <IntakeProvenance api={api} language={language} id={loadedRecord.id}/>
-    <EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>
-    <WorkflowWorkspace api={api} language={language} caseId={id}/>
+    {activePanel==='evidence'&&<><RecordVerification api={api} language={language} id={loadedRecord.id}/><IntakeProvenance api={api} language={language} id={loadedRecord.id}/></>}
+    {activePanel==='timeline'&&<EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>}
+    <WorkflowWorkspace api={api} language={language} caseId={id} panel={activePanel==='response'?'response':activePanel==='audit'?'audit':activePanel==='next'?'next':'none'}/>
+    <nav className="case-next-actions" aria-label={language==='hi'?'अगला भाग':'Next section'}>{activePanel!=='overview'&&<button type="button" className="secondary-button" onClick={()=>switchPanel(allowedPanels[allowedPanels.indexOf(activePanel)-1])}>{language==='hi'?'← पिछला':'← Previous'}</button>}{activePanel!=='next'&&<button type="button" onClick={()=>switchPanel(allowedPanels[allowedPanels.indexOf(activePanel)+1])}>{language==='hi'?'अगला भाग →':'Next section →'}</button>}</nav>
   </article>;
 }
 

@@ -215,15 +215,15 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         <p className="counter" aria-live="polite">{narrative.length.toLocaleString(locale)} / 12,000 {t('characters')}</p>
       </section>
       <section className="form-section" data-wizard-stage="1" aria-labelledby="concerns-title">
-        <h2 id="concerns-title">{t('issuesTitle')}</h2><p className="section-intro">{t('issuesIntro')}</p>
+        <h2 id="concerns-title">{language==='hi'?'आप किन सवालों का जवाब चाहते हैं?':'What do you want answered?'}</h2><p className="section-intro">{t('issuesIntro')}</p>
         {concerns.map((concern, index) => {
           const field = concern.uiId; const errorId = `${field}-error`; const wordingId = `${field}-wording`;
           return <fieldset className="concern" key={field}>
             <legend className="concern-legend"><span>{t('concern')} {index + 1}</span><label className="type-control"><span className="sr-only">{t('concernType', { n: index + 1 })}</span><select aria-label={t('concernType', { n: index + 1 })} value={concern.type} disabled={busy||attempt} onChange={(event) => { changed(); updateConcern(field, { type: event.target.value as ConcernType }); }}>
-              <option value="service">{t('service')}</option><option value="conduct">{t('conduct')}</option><option value="mixed">{t('mixed')}</option>
+              <option value="service">{language==='hi'?'सेवा, देरी या जानकारी':'Service, delay or information'}</option><option value="conduct">{language==='hi'?'कर्मचारी का व्यवहार':'Staff behaviour'}</option><option value="mixed">{language==='hi'?'दोनों':'Both'}</option>
             </select></label></legend>
             <p className="field-help type-help">{t(`${concern.type}Help` as CopyKey)}</p>
-            <label className="sr-only" htmlFor={wordingId}>{t('concern')} {index + 1}: {t('account')}</label>
+            <label className="field-label" htmlFor={wordingId}>{language==='hi'?'इस मुद्दे को अपने शब्दों में लिखें':'Describe this issue in your own words'}</label>
             <textarea id={wordingId} aria-describedby={fieldErrors[field] ? errorId : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy||attempt} onChange={(event) => { changed(field); updateConcern(field, { wording: event.target.value }); }} placeholder={t('wordingPlaceholder')} />
             {fieldErrors[field] && <p className="field-error" id={errorId}>{t(fieldErrors[field])}</p>}
             <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}>{t('removeConcern')} {index + 1}</button>}</div>

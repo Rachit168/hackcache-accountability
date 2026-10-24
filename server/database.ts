@@ -17,6 +17,8 @@ export async function transaction<T>(pool:pg.Pool,actor:string,work:(client:pg.P
 }
 export function caseStore(pool:pg.Pool) {
   return {
+    escalationRead:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.escalation_read($1::uuid) AS value',[id])).rows[0].value),
+    escalationCommand:(actor:string,id:string,key:string,action:string,body:unknown)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.escalation_command($1::uuid,$2::uuid,$3::text,$4::jsonb) AS value',[id,key,action,JSON.stringify(body)])).rows[0].value),
     intakeCommand:(actor:string,operation:string,key:string,body:unknown)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.intake_command($1,$2,$3::jsonb) AS value',[operation,key,JSON.stringify(body)])).rows[0].value),
     evidenceStage:(actor:string,id:string,name:string,type:string,size:number,hash:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.evidence_stage($1,$2,$3,$4,$5) AS value',[id,name,type,size,hash])).rows[0].value),
     evidenceGet:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.evidence_get($1) AS value',[id])).rows[0].value),

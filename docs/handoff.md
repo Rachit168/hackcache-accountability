@@ -1,6 +1,12 @@
 # HC-P6 current handoff
 
-## Current handoff — HC-P6-B02 implemented and self-verified
+## Current handoff — HC-P6-B03 Gate A implemented
+
+Migration 009 is applied: DEMO-ESC-1 three-level fictional authority/deadline policy, per-case protected clock, bounded one-time investigation, explicit evaluation, transactionally serialized escalation, durable retries and canonical ledger events. Responses/claimed resolution do not establish independent resolution or citizen agreement. Owners may evaluate activated cases; only assigned reviewers control the fictional clock/observations. Office workflows remain separate; no private evidence is automatically forwarded.
+
+Gate A: 84 local tests/typecheck, eight real escalation assertion groups (including independent PostgreSQL backends with observed blocking), corrected foundation permission/RLS checks and affected office/workflow connected suite passed. Retained B02 snapshot stayed unchanged. See [b03-evidence.md](b03-evidence.md) for the initial transient 503, race-harness/bootstrap correction, permission-probe key correction, commands and limits. Gate B is not yet started at this mandatory backend commit; proceed only within the current B03 time/usage budget. B04 Resolution Audit/appeals remain deferred. This is self-verification, not independent acceptance.
+
+## Historical handoff — HC-P6-B02 implemented and self-verified
 
 The real citizen → private source → live OpenRouter transcript/report → explicit Apply/correction → atomic submission → reload → owner/reviewer provenance journey now works. Browser case 56a6c1e0-f161-45b7-b11d-f574443a866f retains the Monday AI version, separate Tuesday citizen correction, WAV and browser-created WebM. Owner/reviewer chain/display/actual-byte verification passed. The reviewer recorded an attributed Not misuse reason; unrelated citizen/office private-artifact requests returned 403. Exact-fixture prepared labeling/rejection, written-only submission, recording/playback/upload retry, controlled denial/interruption/discard/size errors, English/Hindi and 390px inspection were checked.
 

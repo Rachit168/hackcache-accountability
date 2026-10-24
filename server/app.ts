@@ -7,7 +7,8 @@ import { complaintRequestLimitBytes } from './request-limits.js';
 import {evidenceLimits,fingerprint,privateStorage,validatedType} from './evidence.js';
 import {buildIntake} from './intake-ai.js';
 import {generationSchema,safeFilename} from '../domain/intake-ai.js';
-type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'|'intakeCommand'>>;
+import {escalationCommands,type EscalationAction} from '../domain/escalation.js';
+type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'|'intakeCommand'|'escalationRead'|'escalationCommand'>>;
 type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>};
 export function createApp({config,store,verify}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
@@ -21,6 +22,13 @@ export function createApp({config,store,verify}:Dependencies) {
     if(!match){res.status(401).json({error:'Sign in with a managed citizen account.'});return;}
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
+  });
+  app.get('/api/escalation/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(await store!.escalationRead!(res.locals.actor,id.data));}catch(e){next(e);}});
+  app.post('/api/escalation/:id/:action',async(req,res,next)=>{
+    const id=uuidSchema.safeParse(req.params.id),key=uuidSchema.safeParse(req.get('Idempotency-Key'));const action=String(req.params.action);
+    const schema=Object.hasOwn(escalationCommands,action)?escalationCommands[action as EscalationAction]:null;const input=schema?.safeParse(req.body);
+    if(!id.success||!key.success||!input?.success){res.status(400).json({error:'Invalid escalation command. Roles, authorities and timestamps are server-assigned.'});return;}
+    try{res.json(await store!.escalationCommand!(res.locals.actor,id.data,key.data,action,input.data));}catch(e){next(e);}
   });
   const intakeBusy=new Set<string>();const intakeCounts=new Map<string,{start:number;count:number}>();
   app.post('/api/intake/drafts',async(req,res,next)=>{

@@ -16,6 +16,7 @@ import { EvidenceUpload } from './evidence-upload';
 import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assistant';
 import {EscalationTimeline} from './escalation';
 import {safeFilename} from '../domain/intake-ai';
+import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -289,10 +290,9 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
 function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: boolean; language: Language; t: Translator }) {
   const { id } = useParams();
   const [caseParams,setCaseParams] = useSearchParams();
-  const allowedPanels=['overview','evidence','timeline','response','audit','next'] as const;
-  type CasePanel=typeof allowedPanels[number];
-  const requested=caseParams.get('section');
-  const activePanel:CasePanel=allowedPanels.includes(requested as CasePanel)?requested as CasePanel:'overview';
+  const [responseCheck,setResponseCheck]=useState<ResponseCheck>('checking');
+  const availablePanels=casePanels(responseCheck);
+  const activePanel=resolveCasePanel(caseParams.get('section'),responseCheck,caseParams.has('auditResponse'));
   const switchPanel=(panel:CasePanel)=>{const params=new URLSearchParams(caseParams);params.set('section',panel);setCaseParams(params);window.scrollTo({top:0,behavior:'instant'});};
   const [record, setRecord] = useState<CaseRecord>();
   const [state, setState] = useState<'loading' | 'ready' | 'not-found' | 'unavailable' | 'auth-error'>('loading');
@@ -326,6 +326,15 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     });
     return () => { active = false; };
   }, [id, ready, signedIn, retry]);
+  useEffect(()=>{
+    let active=true;
+    setResponseCheck('checking');
+    if(!ready||!signedIn||!id)return;
+    api<{responses:{id:string}[]}>('/audit/'+encodeURIComponent(id)).then(value=>{
+      if(active)setResponseCheck(value.responses?.length?'available':'missing');
+    }).catch(()=>{if(active)setResponseCheck('error');});
+    return ()=>{active=false;};
+  },[id,ready,signedIn,retry]);
   const visibleState = loadedId === id ? state : 'loading';
   if (!ready) return <section className="notice"><h1>{t('receiptAccess')}</h1><p>{t('receiptAccessBody')}</p><Link to="/">{t('goFile')}</Link></section>;
   async function recoverReceipt() {
@@ -360,7 +369,20 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
   return <article className="receipt case-dashboard" aria-labelledby="receipt-title">
     <div className="receipt-heading"><p className="sample-label">{language==='hi'?'आपका निजी केस':'Your private case'} · {t('desk')}</p><h1 id="receipt-title">{language==='hi'?'शिकायत की जानकारी':'Your complaint'}</h1><span className="status">{t('receiptStatusSubmitted')}</span><p className="receipt-lead">{language==='hi'?'यह मामला केवल काल्पनिक प्रदर्शन में दर्ज है। हर भाग को अलग खोलें।':'This case is recorded in the fictional demo only. Choose what you want to review below.'}</p></div>
     <dl className="receipt-meta"><div><dt>{t('reference')}</dt><dd className="reference" id="case-reference">{loadedRecord.id}</dd></div><div><dt>{t('submitted')}</dt><dd><time dateTime={loadedRecord.submittedAt}>{new Date(loadedRecord.submittedAt).toLocaleString(locale)}</time></dd></div><div><dt>{t('office')}</dt><dd>{t('desk')}</dd></div></dl>
-    <nav className="case-tabs" aria-label={language==='hi'?'केस का मेनू':'Case navigation'}>{([['overview',language==='hi'?'सारांश':'Overview'],['evidence',language==='hi'?'साक्ष्य':'Evidence'],['timeline',language==='hi'?'समयक्रम':'Timeline'],['response',language==='hi'?'कार्यालय जवाब':'Office reply'],['audit',language==='hi'?'जवाब जाँच':'Response check'],['next',language==='hi'?'अगला कदम':'Next steps']] as [CasePanel,string][]).map(([key,label])=><button key={key} type="button" className={activePanel===key?'active':''} aria-current={activePanel===key?'page':undefined} onClick={()=>switchPanel(key)}>{label}</button>)}</nav>
+    <nav className="case-tabs" aria-label={language==='hi'?'केस का मेनू':'Case navigation'}>{availablePanels.map(key=><button key={key} type="button" className={activePanel===key?'active':''} aria-current={activePanel===key?'page':undefined} onClick={()=>switchPanel(key)}>{({
+ overview:language==='hi'?'सारांश':'Overview',
+ evidence:language==='hi'?'साक्ष्य':'Evidence',
+ timeline:language==='hi'?'प्रगति':'Progress',
+ response:language==='hi'?'कार्यालय जवाब':'Office reply',
+ audit:language==='hi'?'जवाब की जाँच':'Check reply',
+ next:language==='hi'?'अगले कदम':'Next steps'
+} as Record<CasePanel,string>)[key]}</button>)}</nav>
+    {activePanel==='overview'&&<section className="case-status-panel" aria-labelledby="case-progress-title"><h2 id="case-progress-title">{language==='hi'?'अभी आपके मामले की स्थिति':'Your case at a glance'}</h2>
+     <ol className="case-progress"><li className="complete"><span>✓</span><div><strong>{language==='hi'?'शिकायत दर्ज':'Record created'}</strong><small>{language==='hi'?'निजी रसीद उपलब्ध':'Private receipt available'}</small></div></li>
+     <li className={responseCheck==='available'?'complete':''}><span>{responseCheck==='available'?'✓':'2'}</span><div><strong>{language==='hi'?'कार्यालय का जवाब':'Office response'}</strong><small>{responseCheck==='available'?(language==='hi'?'जवाब दर्ज है':'A response is recorded'):responseCheck==='missing'?(language==='hi'?'अभी जवाब दर्ज नहीं':'Not recorded yet'):responseCheck==='error'?(language==='hi'?'स्थिति नहीं जाँची जा सकी':'Could not verify status'):(language==='hi'?'स्थिति देखी जा रही है':'Checking status')}</small></div></li>
+     <li className={responseCheck==='available'?'ready':''}><span>3</span><div><strong>{language==='hi'?'जवाब देखें और तुलना करें':'Read and compare'}</strong><small>{responseCheck==='available'?(language==='hi'?'अब जवाब खोल सकते हैं':'Available now'):(language==='hi'?'जवाब दर्ज होने पर खुलेगा':'Available after a recorded response')}</small></div></li></ol>
+     {responseCheck==='error'&&<button type="button" className="secondary-button" onClick={()=>setRetry(v=>v+1)}>{language==='hi'?'स्थिति फिर जाँचें':'Check response status again'}</button>}
+    </section>}
     {activePanel==='overview'&&<section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
       <ol className="saved-concerns">{loadedRecord.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>
     </section>}
@@ -368,8 +390,8 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}</>}
     {activePanel==='evidence'&&<><RecordVerification api={api} language={language} id={loadedRecord.id}/><IntakeProvenance api={api} language={language} id={loadedRecord.id}/></>}
     {activePanel==='timeline'&&<EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>}
-    <WorkflowWorkspace api={api} language={language} caseId={id} panel={activePanel==='response'?'response':activePanel==='audit'?'audit':activePanel==='next'?'next':'none'}/>
-    <nav className="case-next-actions" aria-label={language==='hi'?'अगला भाग':'Next section'}>{activePanel!=='overview'&&<button type="button" className="secondary-button" onClick={()=>switchPanel(allowedPanels[allowedPanels.indexOf(activePanel)-1])}>{language==='hi'?'← पिछला':'← Previous'}</button>}{activePanel!=='next'&&<button type="button" onClick={()=>switchPanel(allowedPanels[allowedPanels.indexOf(activePanel)+1])}>{language==='hi'?'अगला भाग →':'Next section →'}</button>}</nav>
+    {(activePanel==='response'||activePanel==='audit'||activePanel==='next')&&<WorkflowWorkspace api={api} language={language} caseId={id} panel={activePanel}/>} 
+    <nav className="case-next-actions" aria-label={language==='hi'?'अगला भाग':'Next section'}>{adjacentCasePanel(activePanel,responseCheck,-1)&&<button type="button" className="secondary-button" onClick={()=>{const prev=adjacentCasePanel(activePanel,responseCheck,-1);if(prev)switchPanel(prev);}}>{language==='hi'?'← पिछला':'← Previous'}</button>}{adjacentCasePanel(activePanel,responseCheck,1)&&<button type="button" onClick={()=>{const next=adjacentCasePanel(activePanel,responseCheck,1);if(next)switchPanel(next);}}>{language==='hi'?'अगला भाग →':'Next section →'}</button>}</nav>
   </article>;
 }
 

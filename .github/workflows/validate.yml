@@ -1,0 +1,26 @@
+name: Verify Janvaani
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [ux/stepwise-upload-repair]
+
+permissions:
+  contents: read
+
+jobs:
+  types-tests-build:
+    name: Typecheck, tests and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

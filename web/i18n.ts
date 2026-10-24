@@ -12,7 +12,7 @@ const englishCopy = {
     sessionActive: 'Demo session active. Your entries are not saved until you submit.',
     serviceConnectionError: 'The demo service could not be reached. Check your connection, then try again.',
     storyTitle: 'What happened', storyIntro: 'Write what happened, where and when, and what response you need. Use fictional details only.',
-    account: 'Your account', narrativePlaceholder: 'For example: I visited the fictional permit desk on sample day 4…',
+    account: 'Tell us what happened', narrativePlaceholder: 'For example: I visited the fictional permit desk on sample day 4…',
     narrativeHelp: 'Include the details needed to understand the event. Avoid real personal information.', characters: 'characters',
     issuesTitle: 'Issues to address', issuesIntro: 'List each issue separately so the saved record keeps your wording and order.',
     concern: 'Concern', concernType: 'Type for concern {n}', service: 'Service request', conduct: 'Conduct concern', mixed: 'Mixed concern',

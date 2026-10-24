@@ -1,4 +1,42 @@
-# Janvaani — HackCache accountability foundation
+# Janvaani — private grievance records and response accountability
+
+**Current B01–B05 demonstration:** private evidence, source-linked intake, reviewed office responses, explicit fictional escalation, citizen disputes, response-coverage comparison, official-source guidance and an owner-only portable case package. Use fictional data only. No government complaint or appeal is filed by this application.
+
+## Current release status — HC-P6-R01
+
+- Repository exists at https://github.com/Rachit168/hackcache-accountability and is **private at 24 October 2026 preflight**. Visibility will not be changed without owner approval.
+- **Public HTTPS URL: not yet deployed/verified.** Render account sign-in is complete; service setup and public acceptance are in progress. A healthy process is not proof of a working deployment.
+- Public video/deck links are not supplied or verified. See [release evidence](docs/r01-release.md), [deployment setup](docs/render-deployment.md) and [submission draft](docs/submission-package.md).
+
+## Current capabilities and limits
+
+- Citizens use real managed anonymous Supabase identities, confirm ordered concerns/declaration and receive a PostgreSQL-backed private receipt. Auth sessions/language preferences use browser storage; complaint persistence does not. Losing an anonymous session can lose access; cross-device recovery is not implemented.
+- Private JPEG/PNG, PDF/plain-text, WAV/MP3/Ogg and WebM/MP4 evidence: at most five files, 8 MiB each and 30 MiB combined. Server content checks, opaque object identifiers, completed-upload staging and atomic associations; no antivirus/forensic claim. Owners and assigned reviewers can inspect evidence; offices and unrelated users cannot.
+- Server-only OpenRouter provides explicit AI-assisted intake/transcription and source-linked response comparison. Citizen review/corrections are preserved. Invalid provider quotations fail safely. Exact-fixture prepared mode is disclosed; there is no silent prepared fallback. Visual-video interpretation is unsupported.
+- Assigned reviewers approve separate outgoing text; separately provisioned fictional offices acknowledge/respond to exact versions. Explicit DEMO-ESC-1 activation/evaluation records fictional deadlines and escalation; no scheduler, statutory deadlines or actual authority forwarding.
+- Citizens record immutable disputes targeting exact responses/versions with authorised references. A dispute is an attributed internal statement, not an official appeal or finding.
+- Resolution Audit compares textual coverage against exact original concerns. Interpretations are unverified, and human selections/AI assessments are unsaved. Only selected source references survive reload. Citizen disagreement remains separate from factual findings.
+- Six bilingual NALSA/CPGRAMS cards include source scope, verification date and unknown eligibility/jurisdiction. CPGRAMS applicability is conditional; no representation or filing is promised.
+- Owner-requested ZIP includes originals, response versions, timeline, disputes, evidence manifest, raw audit references, guidance, canonical ledger, printable escaped HTML, file manifest and offline `verify.mjs`. Evidence bytes are omitted unless explicitly selected, reauthorised and rehashed. Unsaved analysis is NOT_CHECKED.
+- “Verify this record” recomputes chain, displayed-original/concern/evidence-manifest consistency and actual retrieved-byte hashes. Unread bytes do not pass. Legacy baselines carry migration-time provenance. A privileged operator can rewrite/truncate an entire unanchored chain/head; neither hashes nor matching quotations establish truth, guilt or real-world resolution. ZIP manifests are similarly replaceable commitments.
+
+## Current architecture, setup and verification
+
+React/Vite + typed Express serve one same-origin frontend/API process; managed Supabase Auth verifies identities; restricted PostgreSQL transactional commands and forced RLS protect private records; private Supabase Storage holds evidence; OpenRouter keys remain server-only. Ordinary requests never use migration/admin credentials. Per-process limits are not distributed abuse protection. No production security certification or independent acceptance is claimed.
+
+Use Node **24.19.0** (`.node-version`) and npm from repository root `D:\project\Hack Cache`. Run `npm ci`, configure the ignored `.env` from `.env.example`, then `npm run dev`; production: `npm run build` and `npm start`. The server binds `0.0.0.0` to platform PORT and serves nested case routes through the SPA fallback. `/api/health` reports process/config presence, not backend acceptance.
+
+Runtime configuration: `SUPABASE_URL`, publishable `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_REF`, matching `DEDICATED_PROJECT_CONFIRM`, restricted `DATABASE_URL`, appropriate `SUPABASE_CA_CERT_PATH`, server-only `OPENROUTER_API_KEY` and explicit report/transcription models. Hosted service must exclude `MIGRATION_DATABASE_URL`, `HC_MIGRATION_PASSWORD`, `HC_RUNTIME_PASSWORD`, admin/service-role keys, local sessions and connected-check flags. TLS certificate/hostname verification stays enabled. Reuse the dedicated project and applied migrations 001–013; do not reset records. Local operator provisioning in `database/provision-demo.ts` produces ignored private staff-session files loaded through `/staff`; public visitors cannot self-promote to staff.
+
+Run `npm test`, `npm run build` and read-only `node qa/release-safety.mjs`. Dedicated connected checks such as `npx tsx qa/package-connected.ts` require existing ignored configuration plus `RUN_CONNECTED_CHECKS=true`; they create retained fictional fixtures and may use separate local operator credentials for audit/provisioning. Never publish `.env`, `.cache`, `qa/artifacts`, private ZIPs or sessions. Local checks are not deployed acceptance.
+
+**Demo:** fictional Meera selects evidence → explicitly processes/reviews draft or sees honest provider failure → confirms concerns/submits/reloads → verifies chain/display/bytes → assigned reviewer releases approved text → separate fictional office responds → explicit fictional escalation → citizen disputes exact response → compares source-linked response gaps → opens official guidance → selects evidence copies/downloads ZIP → extracts and runs `node verify.mjs`. Recheck office/unrelated denials and Hindi/phone layout.
+
+No official filing, legal representation, verified allegation finding, scheduled escalation, full adjudication, public profiles, PDF export or government integration exists. Comprehensive accessibility and deployed acceptance remain separate checks. Confirmed teammate contributions have not been supplied; starter templates remain in `content/` and `qa/`. Historical evidence is retained in `docs/` and current [handoff](docs/handoff.md).
+
+## Historical foundation reference — superseded by B01–B05 above
+
+The original 23 October foundation description follows for provenance. Its capability/deferred/status statements describe that historical checkpoint, not the current application.
 
 **Written foundation: CONNECTED_SELF_CHECKS_PASSED / BROWSER_JOURNEY_PASSED (23 October 2026).** A fictional citizen complaint workspace. Dedicated hosted Supabase persistence, separate managed-identity isolation, restricted SQL commands/RLS, atomicity, idempotency and context cleanup passed the recorded self-checks. The built local browser application submitted four concerns and reloaded the same receipt; a separate database audit matched the saved content exactly. This slice is ready for owner acceptance. No public application deployment, production readiness or independent acceptance is claimed.
 

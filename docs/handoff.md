@@ -1,5 +1,11 @@
 # HC-P6 current handoff
 
+## Current handoff — HC-P6-R01 release checkpoint
+
+Deployment is **blocked at owner GitHub-provider authorisation in Render**, following successful owner login in Brave. Browser control disconnected on opening GitHub connection; reconnect Brave and authorise only this private repository. No service, URL, charge, secret transfer or visibility change is claimed. Repo metadata confirms private/main. Do not claim R01 deployed/independent acceptance from historical B01–B05 checks.
+
+Fresh production build/typecheck and 35 focused tests passed. Reachable starting history review covered 30 commits, 248 blobs plus messages/paths: no real credential or forbidden/private artifact found; two exact fictional URL test blobs were reviewed. Node 24.19.0 is pinned and npm caches directed beneath the project. README refreshed with B01–B05 and historical/pre-opening provenance preserved. See [r01-release.md](r01-release.md), [render-deployment.md](render-deployment.md) and [submission-package.md](submission-package.md). All 18 deployed checks, public ZIP verification, actual HTTPS URL, video and deck remain pending. Organiser deadline publications conflict; obtain dashboard/organiser confirmation. Resume Gate 1, then public acceptance, final safety/README alignment and owner visibility approval. No new features/migrations/workflow infrastructure.
+
 ## Current handoff — HC-P6-B05-B guidance and private package
 
 Six bilingual informational cards link independently checked NALSA and CPGRAMS sources with verification date, scope and jurisdiction/eligibility limits. Gate A checkpoint `34fd150` preceded Gate B. CPGRAMS municipal applicability and legal-aid eligibility remain unknown; no deadlines, contacts, representation or completed government action are invented.

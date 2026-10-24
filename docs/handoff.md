@@ -1,5 +1,11 @@
 # HC-P6 current handoff
 
+## Current handoff — HC-P6-B05-A Resolution Audit Part 1
+
+Private read-only response coverage is implemented for owners and assigned reviewers. Every original concern is linked to a selected exact persisted office-response ID/version/text. OpenRouter returns only bounded coverage enums and exact quotations; unknown/missing/duplicate concern IDs and unsupported quotations are rejected. Fixed bilingual explanations distinguish textual coverage from actual resolution. Provider failure shows unclear/unverified sources plus explicit unsaved human review. Citizen disputes remain separate attributed statements and can label the linked concern Disputed by citizen. Source selection survives reload through the URL; interpretations and local human reviews are explicitly unsaved.
+
+Backend checkpoint 1d3af3f preceded browser checks. 98 local tests, typecheck/build, seven focused post-correction tests, and four connected groups (including real OpenRouter, prompt injection/vague closure, access denial, versions, missing/ack-only responses and unchanged ledger/source snapshots) passed. Browser owner live comparison, reload, human review, English/Hindi, 400px view and assigned-reviewer sources were inspected. See [b05-a-evidence.md](b05-a-evidence.md). No migration/grant change, official filing, truth/guilt finding or independent acceptance. B05-B starts at the final published SHA in the completion report and requires separate scope for the next audit component; retain these exact-source and unverified-interpretation limits.
+
 ## Current handoff — HC-P6-B04-A
 
 Additive migration 013 is applied. Owners can record one immutable dispute against an exact existing office response/version or explicitly simulated closure claim, preserving authored reason, optional original-concern/attached-evidence references and server time in the canonical ledger transaction. Assigned reviewers read the private record; office/unrelated identities are denied. This is an internal record, with no government appeal filing/acceptance or legal-procedure claim. Compact English/Hindi citizen/reviewer UI, retry identity and confirmed-readback handling are implemented.

@@ -1,5 +1,7 @@
 # HC-P6-B01 partial checkpoint — 2026-10-24 IST
 
+**Historical checkpoint.** The continuation implements the missing real evidence path; see [current B01 continuation evidence](b01-continuation-evidence.md). The incomplete status and NOT RUN rows below describe this earlier checkpoint only.
+
 Status: **INCOMPLETE — resource stop reached.** This checkpoint implements the event-ledger backend and an unreviewed browser verification action. It does not implement evidence upload or evidence-byte verification and does not satisfy B01 acceptance. Starting Git commit: ff4ddc9bd9387d2cab5c8b56e8f5e52c6d7d86da.
 
 ## Implemented and checked

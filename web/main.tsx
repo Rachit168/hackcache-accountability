@@ -11,6 +11,7 @@ import type { FormError } from './form-types';
 import './style.css';
 import { StaffSession, WorkflowWorkspace } from './workflow';
 import { RecordVerification } from './record-verification';
+import { EvidenceUpload } from './evidence-upload';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -29,6 +30,7 @@ async function api<T = { error?: string }>(path: string, init: RequestInit = {})
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.data.session?.access_token ?? ''}`, ...init.headers },
     });
   } catch { throw new ApiError(0, 'network'); }
+  if(response.ok&&response.headers.get('Content-Disposition')?.startsWith('attachment')){const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='evidence';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return undefined as T;}
   const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new ApiError(response.status, body.error ?? 'request');
   return body;
@@ -122,10 +124,12 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [attempt, setAttempt] = useState(false);
+  const [evidenceIds,setEvidenceIds]=useState<string[]>([]);
+  const [evidenceReady,setEvidenceReady]=useState(true);
   const [summaryFocus, setSummaryFocus] = useState(0);
   const summaryRef = useRef<HTMLElement>(null);
   const submitted = useRef(false);
-  const payload = { narrative, office: 'SAMPLE_MUNICIPAL_DESK', category: 'SAMPLE_MUNICIPAL_SERVICE', concerns: concerns.map(({ type, wording }) => ({ type, wording })), declaration };
+  const payload = { narrative, office: 'SAMPLE_MUNICIPAL_DESK', category: 'SAMPLE_MUNICIPAL_SERVICE', concerns: concerns.map(({ type, wording }) => ({ type, wording })), declaration, ...(evidenceIds.length?{evidenceIds}:{}) };
   const locale = language === 'hi' ? 'hi-IN' : 'en-IN';
   const summaryItems = fieldErrorSummary(fieldErrors, concerns);
   const shouldWarn = shouldWarnOnLeave(narrative, concerns, declaration, submitted.current);
@@ -148,6 +152,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError(undefined);
+    if(!evidenceReady)return;
     const parsed = complaintSchema.safeParse(payload);
     if (!parsed.success) {
       const next: Record<string, FormError> = {};
@@ -183,7 +188,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
       <section className="form-section" aria-labelledby="story-title">
         <h2 id="story-title">{t('storyTitle')}</h2><p className="section-intro">{t('storyIntro')}</p>
         <label className="field-label" htmlFor="narrative">{t('account')}</label>
-        <textarea id="narrative" aria-describedby={`narrative-help${fieldErrors.narrative ? ' narrative-error' : ''}`} aria-invalid={!!fieldErrors.narrative} maxLength={12000} rows={6} value={narrative} onChange={(event) => { changed('narrative'); setNarrative(event.target.value); }} placeholder={t('narrativePlaceholder')} disabled={busy} />
+        <textarea id="narrative" aria-describedby={`narrative-help${fieldErrors.narrative ? ' narrative-error' : ''}`} aria-invalid={!!fieldErrors.narrative} maxLength={12000} rows={6} value={narrative} onChange={(event) => { changed('narrative'); setNarrative(event.target.value); }} placeholder={t('narrativePlaceholder')} disabled={busy||attempt} />
         <p className="field-help" id="narrative-help">{t('narrativeHelp')}</p>
         {fieldErrors.narrative && <p className="field-error" id="narrative-error">{t(fieldErrors.narrative)}</p>}
         <p className="counter" aria-live="polite">{narrative.length.toLocaleString(locale)} / 12,000 {t('characters')}</p>
@@ -193,25 +198,27 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         {concerns.map((concern, index) => {
           const field = concern.uiId; const errorId = `${field}-error`; const wordingId = `${field}-wording`;
           return <fieldset className="concern" key={field}>
-            <legend className="concern-legend"><span>{t('concern')} {index + 1}</span><label className="type-control"><span className="sr-only">{t('concernType', { n: index + 1 })}</span><select aria-label={t('concernType', { n: index + 1 })} value={concern.type} disabled={busy} onChange={(event) => { changed(); updateConcern(field, { type: event.target.value as ConcernType }); }}>
+            <legend className="concern-legend"><span>{t('concern')} {index + 1}</span><label className="type-control"><span className="sr-only">{t('concernType', { n: index + 1 })}</span><select aria-label={t('concernType', { n: index + 1 })} value={concern.type} disabled={busy||attempt} onChange={(event) => { changed(); updateConcern(field, { type: event.target.value as ConcernType }); }}>
               <option value="service">{t('service')}</option><option value="conduct">{t('conduct')}</option><option value="mixed">{t('mixed')}</option>
             </select></label></legend>
             <p className="field-help type-help">{t(`${concern.type}Help` as CopyKey)}</p>
             <label className="sr-only" htmlFor={wordingId}>{t('concern')} {index + 1}: {t('account')}</label>
-            <textarea id={wordingId} aria-describedby={fieldErrors[field] ? errorId : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy} onChange={(event) => { changed(field); updateConcern(field, { wording: event.target.value }); }} placeholder={t('wordingPlaceholder')} />
+            <textarea id={wordingId} aria-describedby={fieldErrors[field] ? errorId : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy||attempt} onChange={(event) => { changed(field); updateConcern(field, { wording: event.target.value }); }} placeholder={t('wordingPlaceholder')} />
             {fieldErrors[field] && <p className="field-error" id={errorId}>{t(fieldErrors[field])}</p>}
-            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}>{t('removeConcern')} {index + 1}</button>}</div>
+            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}>{t('removeConcern')} {index + 1}</button>}</div>
           </fieldset>;
         })}
-        <button className="secondary-button" type="button" disabled={busy || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}>{t('addConcern')}</button>
+        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}>{t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
+      <EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
+      {!evidenceReady&&<p role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
       <section className="form-section submit-section" aria-labelledby="review-title">
         <h2 id="review-title">{t('reviewTitle')}</h2>
-        <label className="declaration" htmlFor="declaration"><input id="declaration" type="checkbox" checked={declaration} disabled={busy} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} /><span>{t('declaration')}</span></label>
+        <label className="declaration" htmlFor="declaration"><input id="declaration" type="checkbox" checked={declaration} disabled={busy||attempt} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} /><span>{t('declaration')}</span></label>
         {fieldErrors.declaration && <p className="field-error" id="declaration-error">{t(fieldErrors.declaration)}</p>}
         {error && <p role="alert" className="error">{t(error)}</p>}
-        <div className="submit-row"><button type="submit" disabled={!enabled || busy}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
+        <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
         {!enabled && <p className="field-help">{t('startSessionToSubmit')}</p>}<p className="field-help">{t('privateReceipt')}</p>
       </section>
     </form>

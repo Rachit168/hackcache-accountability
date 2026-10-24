@@ -1,6 +1,12 @@
 # HC-P6 current handoff
 
-## Current handoff — HC-P6-B01 partial resource checkpoint
+## Current handoff — HC-P6-B01 evidence and verification
+
+Private evidence submission and honest record verification now work through the real dedicated backend. Migration 005 is applied; 001–004 and existing records are preserved. Private Storage, readback-hashed upload staging, atomic full-set finalization and manifest ledger events, authorized safe downloads, and per-file byte verification are implemented. Citizen/reviewer verification recomputes the chain and compares displayed narrative, ordered concerns and evidence manifest against commitments. Office and unrelated identities are denied raw evidence. Written-only behavior remains functional.
+
+58 local tests, typecheck/build, evidence connected checks, affected workflow/foundation checks and a distinct-command database append race passed. The final-build browser demonstrated two evidence types, failed-upload retry, submission/reload, owner/reviewer verification, office/unrelated denials, written-only and legacy paths, English/Hindi and 390px emulation. See [b01-continuation-evidence.md](b01-continuation-evidence.md) for exact reproduction, actual failures, screenshots, staging recovery and security/resource limits. Ready to retain for development; no independent acceptance is claimed. Local/verified remote publication hash is supplied in chat.
+
+## Historical handoff — HC-P6-B01 partial resource checkpoint
 
 B01 is **incomplete**. Additive migration 004 is applied: transactional submission/release/acknowledgement/response hash ledger, explicitly labeled legacy baselines, owner/assigned-reviewer private read endpoint and independent hash recomputation. The citizen/reviewer verification action builds but has not been browser-checked. Evidence uploads, private Storage, evidence finalization and byte verification are not implemented; UI says bytes are not checked.
 

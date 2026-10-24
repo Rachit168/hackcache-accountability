@@ -17,6 +17,9 @@ export async function transaction<T>(pool:pg.Pool,actor:string,work:(client:pg.P
 }
 export function caseStore(pool:pg.Pool) {
   return {
+    evidenceStage:(actor:string,id:string,name:string,type:string,size:number,hash:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.evidence_stage($1,$2,$3,$4,$5) AS value',[id,name,type,size,hash])).rows[0].value),
+    evidenceGet:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.evidence_get($1) AS value',[id])).rows[0].value),
+    recordBundle:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.record_bundle($1) AS value',[id])).rows[0].value),
     recordRead:(actor:string,id:string)=>transaction(pool,actor,async client=>(await client.query('SELECT hc_private.record_read($1::uuid) AS value',[id])).rows[0].value),
     submit:(actor:string,key:string,payload:ComplaintInput)=>transaction(pool,actor,async client=>{
       const result=await client.query<{receipt:Receipt}>('SELECT hc_private.submit_complaint($1::uuid,$2::jsonb) AS receipt',[key,JSON.stringify(payload)]);

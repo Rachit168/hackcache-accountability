@@ -187,3 +187,4 @@ footer { display: flex; justify-content: space-between; gap: 16px; padding: 16px
   a { color: #111; text-decoration: none; }
   .saved-concerns li, .saved-account { break-inside: avoid; }
 }
+ .evidence-file {overflow-wrap:anywhere;margin-block:1rem;}

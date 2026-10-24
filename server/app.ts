@@ -4,7 +4,8 @@ import { complaintSchema, uuidSchema } from '../domain/complaint.js';
 import type { configuration } from './config.js';
 import type { caseStore } from './database.js';
 import { complaintRequestLimitBytes } from './request-limits.js';
-type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'>>;
+import {evidenceLimits,fingerprint,privateStorage,validatedType} from './evidence.js';
+type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'>>;
 type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>};
 export function createApp({config,store,verify}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
@@ -16,11 +17,34 @@ export function createApp({config,store,verify}:Dependencies) {
     const match=/^Bearer ([^\s]+)$/.exec(req.headers.authorization??'');
     if(!match){res.status(401).json({error:'Sign in with a managed citizen account.'});return;}
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
-    try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
+    try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
+  });
+  let evidenceRequests=0;
+  app.use('/api/evidence',(_req,res,next)=>{if(evidenceRequests>=2){res.status(503).json({error:'Evidence service busy. Retry.'});return;}evidenceRequests++;let ended=false;const release=()=>{if(!ended){ended=true;evidenceRequests--;}};res.once('finish',release);res.once('close',release);next();});
+  app.post('/api/evidence',express.raw({type:'application/octet-stream',limit:evidenceLimits.fileBytes}),async(req,res,next)=>{
+    try{
+      const id=uuidSchema.parse(req.get('Idempotency-Key'));const name=decodeURIComponent(req.get('X-Evidence-Name')??'');
+      if(!name.length||name.length>240||/[\x00-\x1f\x7f]/.test(name)||!Buffer.isBuffer(req.body))throw Object.assign(Error('Invalid upload'),{code:'22023'});
+      const type=validatedType(req.body);const hash=fingerprint(req.body);const path=res.locals.actor+'/'+id;
+      const storage=privateStorage(config.url!,config.key!,res.locals.token);
+      const response=await storage.upload(path,req.body,type);await response.body?.cancel();
+      const stored=await storage.read(path);
+      if(stored.length!==req.body.length||fingerprint(stored)!==hash||validatedType(stored)!==type)throw Object.assign(Error('Upload conflict'),{code:'HC409'});
+      res.status(201).json(await store!.evidenceStage!(res.locals.actor,id,name,type,stored.length,hash));
+    }catch(error){if((error as {name?:string}).name==='ZodError'){res.status(400).json({error:'Invalid upload identifier.'});return;}next(error);}
+  });
+  app.get('/api/evidence/:id/:action',async(req,res,next)=>{
+    try{
+      const id=uuidSchema.safeParse(req.params.id);if(!id.success||!['download','verify'].includes(String(req.params.action))){res.status(400).json({error:'Invalid evidence request.'});return;}
+      const file=await store!.evidenceGet!(res.locals.actor,id.data);
+      const bytes=await privateStorage(config.url!,config.key!,res.locals.token).read(file.object_path);
+      if(req.params.action==='verify'){res.json({id:id.data,state:bytes.length===file.byte_count&&fingerprint(bytes)===file.sha256?'verified':'mismatch'});return;}
+      res.set({'Content-Type':'application/octet-stream','Content-Disposition':"attachment; filename=\"evidence\"; filename*=UTF-8''"+encodeURIComponent(file.display_name),'Content-Security-Policy':"sandbox; default-src 'none'"});res.send(bytes);
+    }catch(error){next(error);}
   });
   app.get('/api/records/:id',async(req,res,next)=>{
     const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid record ID.'});return;}
-    try{if(!store?.recordRead){res.status(503).json({error:'Verification unavailable.'});return;}res.json(await store.recordRead(res.locals.actor,id.data));}catch(error){next(error);}
+    try{if(!store?.recordRead){res.status(503).json({error:'Verification unavailable.'});return;}res.json(await (store.recordBundle??store.recordRead)(res.locals.actor,id.data));}catch(error){next(error);}
   });
   app.post('/api/complaints',async(req,res,next)=>{
     const key=uuidSchema.safeParse(req.get('Idempotency-Key')); const payload=complaintSchema.safeParse(req.body);

@@ -1,4 +1,5 @@
 import express from 'express';
+import {disputeSchema} from '../domain/dispute.js';
 import path from 'node:path';
 import { complaintSchema, uuidSchema } from '../domain/complaint.js';
 import type { configuration } from './config.js';
@@ -8,7 +9,7 @@ import {evidenceLimits,fingerprint,privateStorage,validatedType} from './evidenc
 import {buildIntake} from './intake-ai.js';
 import {generationSchema,safeFilename} from '../domain/intake-ai.js';
 import {escalationCommands,type EscalationAction} from '../domain/escalation.js';
-type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'|'intakeCommand'|'escalationRead'|'escalationCommand'>>;
+type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'|'intakeCommand'|'escalationRead'|'escalationCommand'|'disputeRead'|'disputeSubmit'>>;
 type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>};
 export function createApp({config,store,verify}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
@@ -23,6 +24,8 @@ export function createApp({config,store,verify}:Dependencies) {
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
   });
+  app.get('/api/disputes/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(await store!.disputeRead!(res.locals.actor,id.data));}catch(e){next(e);}});
+  app.post('/api/disputes/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id),key=uuidSchema.safeParse(req.get('Idempotency-Key')),body=disputeSchema.safeParse(req.body);if(!id.success||!key.success||!body.success){res.status(400).json({error:'Invalid dispute.'});return;}try{res.json(await store!.disputeSubmit!(res.locals.actor,id.data,key.data,body.data));}catch(e){next(e);}});
   app.get('/api/escalation/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(await store!.escalationRead!(res.locals.actor,id.data));}catch(e){next(e);}});
   app.post('/api/escalation/:id/:action',async(req,res,next)=>{
     const id=uuidSchema.safeParse(req.params.id),key=uuidSchema.safeParse(req.get('Idempotency-Key'));const action=String(req.params.action);

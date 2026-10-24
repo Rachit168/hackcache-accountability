@@ -17,6 +17,8 @@ export async function transaction<T>(pool:pg.Pool,actor:string,work:(client:pg.P
 }
 export function caseStore(pool:pg.Pool) {
   return {
+    disputeRead:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.dispute_read($1::uuid) AS value',[id])).rows[0].value),
+    disputeSubmit:(actor:string,id:string,key:string,body:unknown)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.dispute_submit($1::uuid,$2::uuid,$3::jsonb) AS value',[id,key,JSON.stringify(body)])).rows[0].value),
     escalationRead:(actor:string,id:string)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.escalation_read($1::uuid) AS value',[id])).rows[0].value),
     escalationCommand:(actor:string,id:string,key:string,action:string,body:unknown)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.escalation_command($1::uuid,$2::uuid,$3::text,$4::jsonb) AS value',[id,key,action,JSON.stringify(body)])).rows[0].value),
     intakeCommand:(actor:string,operation:string,key:string,body:unknown)=>transaction(pool,actor,async c=>(await c.query('SELECT hc_private.intake_command($1,$2,$3::jsonb) AS value',[operation,key,JSON.stringify(body)])).rows[0].value),

@@ -2,7 +2,7 @@ import React,{useState} from 'react';
 import {Link} from 'react-router-dom';
 import type {Language} from './i18n';
 
-export function Welcome({language,setLanguage,signedIn,ready,onStart,busy}:{language:Language;setLanguage:(next:Language)=>void;signedIn:boolean;ready:boolean;onStart:()=>void;busy:boolean}){
+export function Welcome({language,signedIn,ready,onStart,busy}:{language:Language;setLanguage:(next:Language)=>void;signedIn:boolean;ready:boolean;onStart:()=>void;busy:boolean}){
  const hi=language==='hi';
  return <div className="welcome-page">
   <section className="welcome-hero">
@@ -12,12 +12,7 @@ export function Welcome({language,setLanguage,signedIn,ready,onStart,busy}:{lang
     <p className="demo-caution"><strong>{hi?'केवल हैकाथॉन प्रदर्शन':'Hackathon demonstration'}</strong> · {hi?'असली शिकायतें सरकारी कार्यालय में नहीं जातीं। केवल काल्पनिक जानकारी दें।':'No government office receives submissions. Use fictional details only.'}</p>
    </div>
    <div className="welcome-start">
-    <p className="eyebrow">{hi?'पहले अपनी भाषा चुनें':'First, choose your language'}</p>
-    <div className="welcome-language" role="group" aria-label={hi?'भाषा चुनें':'Choose a language'}>
-     <button type="button" className={hi?'selected':''} onClick={()=>setLanguage('hi')}>हिंदी <span>Hindi</span></button>
-     <button type="button" className={!hi?'selected':''} onClick={()=>setLanguage('en')}>English <span>अंग्रेज़ी</span></button>
-    </div>
-    <h2>{hi?'आप क्या करना चाहते हैं?':'What would you like to do?'}</h2>
+    <h2>{hi?'शुरू करें':'Get started'}</h2>
     <Link className="primary-link" to="/file">{hi?'नई शिकायत दर्ज करें':'File a complaint'} <span aria-hidden="true">→</span></Link>
     <Link className="quiet-link" to="/cases">{hi?'पिछली रसीद खोलें':'Open a previous receipt'} <span aria-hidden="true">→</span></Link>
     {!signedIn&&ready&&<button className="secondary-button" type="button" disabled={busy} onClick={onStart}>{hi?'निजी डेमो सत्र शुरू करें':'Start a private demo session'}</button>}

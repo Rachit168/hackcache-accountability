@@ -117,6 +117,7 @@ function LanguageToggle({ language, setLanguage, t }: { language: Language; setL
 
 function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: Language; t: Translator }) {
   const navigate = useNavigate();
+  const [step,setStep] = useState(0);
   const [narrative, setNarrative] = useState('');
   const [concerns, setConcerns] = useState<Concern[]>(() => [
     { uiId: crypto.randomUUID(), type: 'service', wording: '' }, { uiId: crypto.randomUUID(), type: 'conduct', wording: '' },
@@ -158,7 +159,9 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
     setConcerns((items) => items.map((item) => item.uiId === uiId ? { ...item, ...update } : item));
   }
   async function submit(event: React.FormEvent) {
-    event.preventDefault(); setError(undefined);
+    event.preventDefault();
+    if(step!==3){setStep(3);return;}
+    setError(undefined);
     if(!evidenceReady)return;
     const parsed = complaintSchema.safeParse(payload);
     if (!parsed.success) {
@@ -171,7 +174,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         }
         if (issue.path[0] === 'declaration') next.declaration = 'declarationError';
       }
-      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); return;
+      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); setStep(next.narrative?0:concerns.some(c=>next[c.uiId])?1:3); return;
     }
     setFieldErrors({}); setBusy(true); setAttempt(true);
     try {
@@ -179,21 +182,28 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
       const receipt = await api<{ id: string }>('/complaints', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({...parsed.data,...(review?{intakeReviewId:review.id}:{})}) });
       submitted.current = true;
       navigate(`/cases/${receipt.id}`);
-    } catch { setError('submitError'); }
+    } catch (caught) { setError('submitError'); if(caught instanceof ApiError && [400,403,409,413,422].includes(caught.status)){setAttempt(false);setKey(crypto.randomUUID());} }
     finally { setBusy(false); }
   }
 
-  return <div className="form-layout">
+  function nextStep(){
+    if(step===0&&!narrative.trim()){setFieldErrors(v=>({...v,narrative:'narrativeError'}));document.getElementById('narrative')?.focus();return;}
+    if(step===1){const missing=concerns.filter(c=>!c.wording.trim());if(missing.length){setFieldErrors(v=>({...v,...Object.fromEntries(missing.map(c=>[c.uiId,'concernError' as const]))}));document.getElementById(missing[0].uiId+'-wording')?.focus();return;}}
+    if(step===2&&!evidenceReady)return;
+    setStep(v=>Math.min(3,v+1));window.scrollTo({top:0,behavior:'instant'});
+  }
+  const stepNames=language==='hi'?['घटना का विवरण','मुख्य मुद्दे','साक्ष्य और AI','समीक्षा व भेजें']:['Your story','Issues to address','Evidence & assistance','Review & submit'];
+  return <div className="form-layout wizard-layout">
     <aside className="help-column" aria-label={t('sideNav')}>
-      <nav className="section-nav" aria-label={t('sideNav')}><a href="#story-title">{t('sectionStory')}</a><a href="#concerns-title">{t('sectionIssues')} <span className="count-pill">{concerns.length}</span></a><a href="#review-title">{t('sectionReview')}</a></nav>
+      <nav className="wizard-progress" aria-label={language==='hi'?'शिकायत के चरण':'Complaint steps'}><ol>{stepNames.map((name,i)=><li key={name} aria-current={step===i?'step':undefined}><button type="button" disabled={busy||attempt||i>step} className={i===step?'current':i<step?'complete':''} onClick={()=>setStep(i)}><span className="step-number">{i+1}</span><span>{name}</span></button></li>)}</ol></nav>
       <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
       <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
     </aside>
-    <form onSubmit={submit} className="form-surface" noValidate>
+    <form onSubmit={submit} className="form-surface" data-wizard-step={step} noValidate><div className="wizard-stage-heading"><p>{language==='hi'?`चरण ${step+1} / 4`:`Step ${step+1} of 4`}</p><h2>{stepNames[step]}</h2><span>{language==='hi'?'आपकी जानकारी भेजने तक सहेजी नहीं जाएगी।':'Your entries are not saved until submission.'}</span></div>
       {error === 'reviewFields' && summaryItems.length > 0 && <section ref={summaryRef} className="error-summary" role="alert" aria-labelledby="error-summary-title" tabIndex={-1}>
         <h2 id="error-summary-title">{t('reviewFields')}</h2><ul>{summaryItems.map((item) => <li key={item.field}><a href={`#${item.targetId}`} onClick={(event) => { event.preventDefault(); const control = document.getElementById(item.targetId); control?.focus(); control?.scrollIntoView({ behavior: 'auto', block: 'center' }); }}>{item.labelKey === 'concern' ? `${t(item.labelKey)} ${item.concernNumber}` : t(item.labelKey)}: {t(item.error)}</a></li>)}</ul>
       </section>}
-      <section className="form-section" aria-labelledby="story-title">
+      <section className="form-section" data-wizard-stage="0" aria-labelledby="story-title">
         <h2 id="story-title">{t('storyTitle')}</h2><p className="section-intro">{t('storyIntro')}</p>
         <label className="field-label" htmlFor="narrative">{t('account')}</label>
         <textarea id="narrative" aria-describedby={`narrative-help${fieldErrors.narrative ? ' narrative-error' : ''}`} aria-invalid={!!fieldErrors.narrative} maxLength={12000} rows={6} value={narrative} onChange={(event) => { changed('narrative'); setNarrative(event.target.value); }} placeholder={t('narrativePlaceholder')} disabled={busy||attempt} />
@@ -201,7 +211,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         {fieldErrors.narrative && <p className="field-error" id="narrative-error">{t(fieldErrors.narrative)}</p>}
         <p className="counter" aria-live="polite">{narrative.length.toLocaleString(locale)} / 12,000 {t('characters')}</p>
       </section>
-      <section className="form-section" aria-labelledby="concerns-title">
+      <section className="form-section" data-wizard-stage="1" aria-labelledby="concerns-title">
         <h2 id="concerns-title">{t('issuesTitle')}</h2><p className="section-intro">{t('issuesIntro')}</p>
         {concerns.map((concern, index) => {
           const field = concern.uiId; const errorId = `${field}-error`; const wordingId = `${field}-wording`;
@@ -219,18 +229,18 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}>{t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
-      <EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
+      <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
       <IntakeAssistant api={api} language={language} text={narrative} evidenceIds={allEvidenceIds} disabled={!enabled||busy||attempt||!evidenceReady} onSource={id=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();setNarrative(draft.body.report.allegation.value);setConcerns(draft.body.report.concerns.map(c=>({uiId:crypto.randomUUID(),type:c.type,wording:c.field.value})));setDeclaration(false);}}/>
       {intakeDraft&&<p role="status">{language==='hi'?'AI संस्करण चुना गया है। अपने सुधार करें और भेजने से पहले घोषणा की पुष्टि करें।':'AI revision selected. Make your corrections and confirm the declaration before submission. Citizen additions and edits carry no invented AI citations.'}</p>}
       {!evidenceReady&&<p role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
-      <section className="form-section submit-section" aria-labelledby="review-title">
+      </div><section className="form-section submit-section" data-wizard-stage="3" aria-labelledby="review-title"><div className="review-recap"><h3>{language==='hi'?'भेजने से पहले जाँचें':'Check before submitting'}</h3><p className="preserve">{narrative}</p><ol>{concerns.map(c=><li key={c.uiId} className="preserve">{c.wording}</li>)}</ol><p>{language==='hi'?`साक्ष्य संदर्भ: ${allEvidenceIds.length}`:`Evidence references: ${allEvidenceIds.length}`}</p></div>
         <h2 id="review-title">{t('reviewTitle')}</h2>
         <label className="declaration" htmlFor="declaration"><input id="declaration" type="checkbox" checked={declaration} disabled={busy||attempt} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} /><span>{t('declaration')}</span></label>
         {fieldErrors.declaration && <p className="field-error" id="declaration-error">{t(fieldErrors.declaration)}</p>}
         {error && <p role="alert" className="error">{t(error)}</p>}
         <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
         {!enabled && <p className="field-help">{t('startSessionToSubmit')}</p>}<p className="field-help">{t('privateReceipt')}</p>
-      </section>
+      </section><nav className="wizard-actions" aria-label={language==='hi'?'चरण नेविगेशन':'Step navigation'}>{step>0&&<button type="button" className="secondary-button" disabled={busy||attempt} onClick={()=>{setStep(v=>Math.max(0,v-1));window.scrollTo({top:0,behavior:'instant'});}}>{language==='hi'?'पिछला':'Back'}</button>}{step<3&&<button type="button" disabled={busy||attempt||step===2&&!evidenceReady} onClick={nextStep}>{language==='hi'?'आगे बढ़ें':'Continue'} <span aria-hidden="true">→</span></button>}</nav>
     </form>
   </div>;
 }

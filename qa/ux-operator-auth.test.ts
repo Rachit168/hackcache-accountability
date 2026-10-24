@@ -8,19 +8,22 @@ function mockStaff(token:string|null,error:unknown=null):Pick<SupabaseClient,'au
 }
 describe('staff API credential isolation',()=>{
  it('rejects calls without a staff client, not falling back to citizen credentials',async()=>{
-  const request=vi.fn(async <T=unknown>()=>({ok:true}) as T);
+  const spy=vi.fn();
+  const request=async <T=unknown>(_path:string,_init?:RequestInit):Promise<T>=>{spy();return {ok:true} as T;};
   await expect(operatorApiFor(undefined,request)('/workflow')).rejects.toThrow('Operator session unavailable');
-  expect(request).not.toHaveBeenCalled();
+  expect(spy).not.toHaveBeenCalled();
  });
  it('rejects a staff client with no valid staff session',async()=>{
-  const request=vi.fn(async <T=unknown>()=>({ok:true}) as T);
+  const spy=vi.fn();
+  const request=async <T=unknown>(_path:string,_init?:RequestInit):Promise<T>=>{spy();return {ok:true} as T;};
   await expect(operatorApiFor(mockStaff(null),request)('/workflow')).rejects.toThrow('Operator authentication required');
-  expect(request).not.toHaveBeenCalled();
+  expect(spy).not.toHaveBeenCalled();
  });
  it('rejects staff refresh/auth errors rather than reusing citizen state',async()=>{
-  const request=vi.fn(async <T=unknown>()=>({ok:true}) as T);
+  const spy=vi.fn();
+  const request=async <T=unknown>(_path:string,_init?:RequestInit):Promise<T>=>{spy();return {ok:true} as T;};
   await expect(operatorApiFor(mockStaff('stale-token',Error('expired')),request)('/workflow')).rejects.toThrow('Operator authentication required');
-  expect(request).not.toHaveBeenCalled();
+  expect(spy).not.toHaveBeenCalled();
  });
  it('uses the provisioned staff token even when caller forges an Authorization header',async()=>{
   let seen:Captured|undefined;

@@ -21,7 +21,7 @@ describe('UX structural regressions (source checks, not browser proof)',()=>{
   expect(main).toContain("storageKey:'janvaani-operator-session'");
   expect(main).toContain("storageKey:'sb-'");
   expect(main).toContain('StaffSession client={client}');
-  expect(main).toContain('const operatorApi=useCallback');
+  expect(main).toContain('operatorApiFor(operatorClient,api)');
   expect(main).not.toContain('StaffSession client={auth}');
  });
  it('only mounts response-related workspace when it is relevant',()=>{

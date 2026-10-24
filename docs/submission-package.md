@@ -14,7 +14,7 @@ Description: Janvaani is a bilingual fictional-data demonstration of private gri
 
 ## Four links — factual state
 
-- Repo: https://github.com/Rachit168/hackcache-accountability — exists, private at preflight; not yet a valid public submission link.
+- Repo: https://github.com/Rachit168/hackcache-accountability — exists, private at preflight; owner explicitly chose to keep it private; not a valid public submission link.
 - Live HTTPS app: **https://hackcache-accountability.onrender.com** — actual Render Free service; public API/browser journey checked 2026-10-24. Cold-start delay is possible.
 - Public video, five minutes or less: **MISSING — no URL/upload verified**.
 - Public pitch deck: **MISSING — no URL/upload verified**.

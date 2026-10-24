@@ -4,9 +4,9 @@
 
 ## Current release status — HC-P6-R01
 
-- Repository exists at https://github.com/Rachit168/hackcache-accountability and is **private at 24 October 2026 preflight**. Visibility will not be changed without owner approval.
+- Repository exists at https://github.com/Rachit168/hackcache-accountability and is **private at 24 October 2026 preflight**. The owner explicitly chose to keep it private during R01; visibility is unchanged.
 - **Live HTTPS app: https://hackcache-accountability.onrender.com** — Render Free Node service, actual public API and browser self-checks passed on 24 October 2026. Free hosting can sleep/cold-start; independent acceptance and production certification are not claimed.
-- Public video/deck links are not supplied or verified. Repository publication awaits owner visibility approval; the application is deployed. See [release evidence](docs/r01-release.md), [deployment setup](docs/render-deployment.md) and [submission draft](docs/submission-package.md).
+- Public video/deck links are not supplied or verified. The owner chose to keep the repository private; the application is deployed. See [release evidence](docs/r01-release.md), [deployment setup](docs/render-deployment.md) and [submission draft](docs/submission-package.md).
 
 ## Current capabilities and limits
 

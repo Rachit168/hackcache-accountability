@@ -7,6 +7,7 @@ import {IntakeProvenance} from './intake-assistant';
 import {EscalationTimeline} from './escalation';
 import {Disputes} from './disputes';
 import {ResolutionAudit} from './resolution-audit';
+import {Guidance} from './guidance';
 import { commandFailure, isCompletedCommand, newCommandKey, workflowScope, workflowSnapshot, writeConfirmed, type PendingWorkflowCommand, type WorkflowAction } from './workflow-state';
 type Concern={id:string;type:string;wording:string};
 type Content={narrative:string;reason:string;concerns:{sourceId:string;type:string;wording:string;reason:string}[]};
@@ -41,6 +42,7 @@ export function WorkflowWorkspace({api,language,caseId}:{api:Api;language:Langua
  {id&&<>
  {view.kind!=='office'&&<Disputes key={id} id={id} api={api} language={language}/>}
  {view.kind!=='office'&&<ResolutionAudit key={'audit-'+id} id={id} api={api} language={language}/>}
+ {view.kind!=='office'&&<Guidance language={language}/>}
  {view.kind==='reviewer'&&<><RecordVerification id={id} api={api} language={language}/><IntakeProvenance id={id} api={api} language={language}/><EscalationTimeline key={id} id={id} api={api} language={language}/></>}
  {view.kind==='reviewer'&&<><h3>{t.originalHeading}</h3><p className="preserve">{view.narrative}</p><ol>{view.concerns?.map(c=><li key={c.id}><strong>{translate(language,c.type as 'service'|'conduct'|'mixed')}</strong><p className="preserve">{c.wording}</p><small className="workflow-id">{t.source}: {c.id}</small></li>)}</ol><button disabled={!!busy} onClick={()=>{const scope=workflowScope(id,'release');setDraft(scope,{narrative:view.narrative!,reason:'',concerns:view.concerns!.map(c=>({sourceId:c.id,type:c.type,wording:c.wording,reason:''}))});}}>{t.prepare}</button>
  {Object.entries(drafts).filter(([s])=>s===workflowScope(id,'release')).map(([scope,draft])=><div className="workflow-draft" key={scope}><h3>{t.draftHeading}</h3><label className="field-label">{t.preview}<textarea disabled={!!pending[scope]} value={draft.narrative} maxLength={12000} onChange={e=>setDraft(scope,{...draft,narrative:e.target.value})}/></label><label className="field-label">{t.reason}<textarea disabled={!!pending[scope]} value={draft.reason} maxLength={2000} onChange={e=>setDraft(scope,{...draft,reason:e.target.value})}/></label>

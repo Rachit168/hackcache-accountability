@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -45,6 +45,8 @@ function App() {
   const t = useMemo(() => (key: CopyKey, values?: Record<string, string | number>) => translate(language, key, values), [language]);
   const [config, setConfig] = useState<Config>();
   const [signedIn, setSignedIn] = useState(false);
+  const [operatorClient,setOperatorClient] = useState<SupabaseClient>();
+  const [operatorSignedIn,setOperatorSignedIn] = useState(false);
   const [error, setError] = useState<CopyKey>();
   const [busy, setBusy] = useState(false);
   const [configRetry, setConfigRetry] = useState(0);
@@ -66,7 +68,12 @@ function App() {
         if (!active) return;
         setConfig(value);
         if (value.ready && value.url && value.publishableKey) {
-          auth ??= createClient(value.url, value.publishableKey,{auth:{storageKey:window.location.pathname.startsWith('/staff')?'janvaani-operator-session':'sb-'+new URL(value.url).hostname.split('.')[0]+'-auth-token'}});
+          auth ??= createClient(value.url, value.publishableKey,{auth:{storageKey:'sb-'+new URL(value.url).hostname.split('.')[0]+'-auth-token'}});
+          // Operator auth is isolated from the citizen's browser identity, even during SPA navigation.
+          const operator=createClient(value.url,value.publishableKey,{auth:{storageKey:'janvaani-operator-session'}});
+          setOperatorClient(operator);
+          const officeSession=await operator.auth.getSession();
+          if(active)setOperatorSignedIn(!!officeSession.data.session);
           if (hotData) hotData.auth = auth;
           const { data } = await auth.auth.getSession();
           if (active) setSignedIn(!!data.session);
@@ -83,11 +90,18 @@ function App() {
     finally { setBusy(false); }
   }
 
+  const operatorApi=useCallback(async <T,>(path:string,init:RequestInit={})=>{
+    if(!operatorClient)throw new Error('operator session unavailable');
+    const {data}=await operatorClient.auth.getSession();
+    if(!data.session)throw new Error('operator authentication required');
+    return api<T>(path,{...init,headers:{...init.headers,Authorization:'Bearer '+data.session.access_token}});
+  },[operatorClient]);
+
   return <>
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>
     <header className="site-header">
-      <Link to="/" className="brand" aria-label={t('brandHome')}><span className="brand-mark" aria-hidden="true">ज</span><span>Janvaani</span></Link>
-      <div className="header-tools"><nav aria-label={t('workspace')}><Link to="/">{language==='hi'?'होम':'Home'}</Link><Link to="/file">{language==='hi'?'शिकायत दर्ज करें':'File a complaint'}</Link><Link to="/staff">{language==='hi'?'कार्यालय डेमो':'Staff demo'}</Link></nav><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
+      <span className="brand"><span className="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H10l-5 4v-14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10.5h8M8 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span><span>Janvaani</span></span>
+      <div className="header-tools"><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
     </header>
     <main>
       <Routes>
@@ -103,14 +117,31 @@ function App() {
         </>} />
         <Route path="/cases" element={<FindCase language={language}/>} />
         <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
-        <Route path="/staff" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
-        <Route path="/staff/:id" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
+        <Route path="/staff" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} api={operatorApi} language={language}/>} />
+        <Route path="/staff/:id" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} api={operatorApi} language={language}/>} />
         <Route path="*" element={<section className="notice"><h1>{t('pageNotFound')}</h1><Link to="/">{t('returnWorkspace')}</Link></section>} />
       </Routes>
       <section id="privacy" className="privacy" aria-labelledby="privacy-title"><h2 id="privacy-title">{t('usingDemo')}</h2><p>{t('privacyBody')}</p></section>
     </main>
-    <footer><span>Janvaani · Hack Cache</span><span>{t('footerDemo')}</span></footer>
+    <footer><span>Janvaani · Hack Cache</span><span>{t('footerDemo')}</span><Link to="/staff">{language==='hi'?'डेमो कर्मचारी प्रवेश':'Staff demo access'}</Link></footer>
   </>;
+}
+
+type StaffApi=<T=unknown>(path:string,init?:RequestInit)=>Promise<T>;
+function StaffPortal({client,active,onReady,api,language}:{client?:SupabaseClient;active:boolean;onReady:()=>void;api:StaffApi;language:Language}){
+ const hi=language==='hi';
+ return <div className="staff-portal">
+  <p className="eyebrow">{hi?'केवल अनुमति प्राप्त डेमो कर्मचारी':'Provisioned demo operators only'}</p>
+  <h1>{hi?'नमूना कार्यालय कार्यक्षेत्र':'Fictional office workspace'}</h1>
+  <p className="staff-intro">{hi?'यह नागरिक शिकायत फॉर्म नहीं है। केवल इस प्रदर्शन के लिए नियुक्त समीक्षक या कार्यालय कर्मचारी यहाँ अपना निजी सत्र खोल सकते हैं।':'This is not the citizen complaint form. Only assigned demo reviewers and fictional office operators can open their private session here.'}</p>
+  <div className="staff-steps">
+   <p><strong>1.</strong> {hi?'समीक्षक को आवंटित मामला दिखता है और वह कार्यालय के लिए संस्करण जारी करता है।':'An assigned reviewer sees a case and releases an office-facing version.'}</p>
+   <p><strong>2.</strong> {hi?'सही कार्यालय कर्मचारी जारी हुआ संस्करण देखकर प्राप्ति और जवाब दर्ज कर सकता है।':'The assigned office operator can acknowledge and respond to the released version.'}</p>
+   <p><strong>3.</strong> {hi?'नागरिक अपने निजी केस में वह जवाब देख सकता है।':'The citizen can review the recorded response in their private case.'}</p>
+  </div>
+  {client?<StaffSession client={client} onReady={onReady} language={language}/>:<p role="status">{hi?'सुरक्षित डेमो कनेक्शन खुल रहा है…':'Connecting to the private demo service…'}</p>}
+  {active?<><p className="staff-active" role="status">{hi?'डेमो कर्मचारी सत्र सक्रिय है। केवल आवंटित मामले दिखेंगे।':'Demo operator session active. Only assigned cases are accessible.'}</p><WorkflowWorkspace api={api} language={language}/></>:<p className="session-caution">{hi?'आपको आयोजक/प्रोजेक्ट ऑपरेटर से मिला निजी JSON सत्र चाहिए। नागरिक सत्र या रसीद यहाँ प्रवेश नहीं देते।':'You need a private JSON session provisioned by the project operator. A citizen session or receipt does not grant access.'}</p>}
+ </div>;
 }
 
 type Translator = (key: CopyKey, values?: Record<string, string | number>) => string;

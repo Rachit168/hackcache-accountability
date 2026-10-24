@@ -10,12 +10,12 @@ Title: **Janvaani — preserve the complaint, question the response**
 
 Problem: **Problem Statement 6: Building a Citizen-Powered Government Accountability Platform** — https://cachedinfo.in/hackcache/problems/government-accountability. Confirm the dashboard selection before entry.
 
-Description: Janvaani is a bilingual fictional-data demonstration of private grievance accountability. Citizens review source-linked AI intake, submit original concerns with private evidence, verify records and compare exact office responses with what they originally raised. Assigned reviewers approve separate office-facing text; fictional responses, explicit demo escalation and attributed citizen disputes preserve history. Official-source guidance and an owner-requested portable package help organise next steps. Managed Supabase identities, restricted PostgreSQL transactions, private Storage and server-side OpenRouter provide the backend. This is not a government filing system, official appeal or proof that an allegation is true. Roles/deadlines are simulated; AI interpretation remains unverified and unsaved. Public deployment/live acceptance are pending; change this last sentence only after observed success.
+Description: Janvaani is a bilingual fictional-data demonstration of private grievance accountability. Citizens review source-linked AI intake, submit original concerns with private evidence, verify records and compare exact office responses with what they originally raised. Assigned reviewers approve separate office-facing text; fictional responses, explicit demo escalation and attributed citizen disputes preserve history. Official-source guidance and an owner-requested portable package help organise next steps. Managed Supabase identities, restricted PostgreSQL transactions, private Storage and server-side OpenRouter provide the backend. This is not a government filing system, official appeal or proof that an allegation is true. Roles/deadlines are simulated; AI interpretation remains unverified and unsaved. The public Render application passed observed API/browser self-checks; independent acceptance and production certification are not claimed.
 
 ## Four links — factual state
 
 - Repo: https://github.com/Rachit168/hackcache-accountability — exists, private at preflight; not yet a valid public submission link.
-- Live HTTPS app: **MISSING — deployment pending**.
+- Live HTTPS app: **https://hackcache-accountability.onrender.com** — actual Render Free service; public API/browser journey checked 2026-10-24. Cold-start delay is possible.
 - Public video, five minutes or less: **MISSING — no URL/upload verified**.
 - Public pitch deck: **MISSING — no URL/upload verified**.
 

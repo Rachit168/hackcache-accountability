@@ -6,7 +6,7 @@ import {extractPdf} from './pdf-extraction.js';
 import type {caseStore} from './database.js';
 import type {configuration} from './config.js';
 const failure=(code:string)=>Object.assign(Error(code),{intakeCode:code});
-async function provider(path:string,body:BodyInit,json=false){
+export async function provider(path:string,body:BodyInit,json=false){
  const key=process.env.OPENROUTER_API_KEY?.trim();if(!key)throw failure('LIVE_CONFIGURATION_REQUIRED');
  const r=await fetch('https://openrouter.ai/api/v1/'+path,{method:'POST',headers:{Authorization:'Bearer '+key,...(json?{'Content-Type':'application/json'}:{})},body,signal:AbortSignal.timeout(45000)});
  if(!r.ok){await r.body?.cancel();throw failure('PROVIDER_UNAVAILABLE');}

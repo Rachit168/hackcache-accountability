@@ -1,4 +1,6 @@
 import express from 'express';
+import {auditSources} from '../domain/resolution-audit.js';
+import {generateAudit} from './resolution-audit.js';
 import {disputeSchema} from '../domain/dispute.js';
 import path from 'node:path';
 import { complaintSchema, uuidSchema } from '../domain/complaint.js';
@@ -24,6 +26,9 @@ export function createApp({config,store,verify}:Dependencies) {
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
   });
+  const auditBusy=new Set<string>();const auditBudgets=new Map<string,{time:number;count:number}>();
+  app.get('/api/audit/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(auditSources(id.data,await store!.disputeRead!(res.locals.actor,id.data)));}catch(e){next(e);}});
+  app.post('/api/audit/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id),rid=uuidSchema.safeParse(req.body?.responseId);if(!id.success||!rid.success||Object.keys(req.body??{}).join(',')!=='responseId'){res.status(400).json({error:'Select an exact recorded response.'});return;}const actor=res.locals.actor;try{const sources=auditSources(id.data,await store!.disputeRead!(actor,id.data));if(!sources.responses.some(r=>r.id===rid.data)){res.status(400).json({error:'No such substantive response in this case.'});return;}const now=Date.now();let budget=auditBudgets.get(actor);if(!budget||now-budget.time>=600000){budget={time:now,count:0};if(auditBudgets.size>=256)auditBudgets.delete(auditBudgets.keys().next().value!);auditBudgets.set(actor,budget);}if(auditBusy.has(actor)||auditBusy.size>=2||budget.count>=4){res.status(429).json({error:'AUDIT_BUSY_OR_RATE_LIMITED'});return;}budget.count++;auditBusy.add(actor);try{res.json({sources,responseId:rid.data,...await generateAudit(sources,rid.data)});}finally{auditBusy.delete(actor);}}catch(e){next(e);}});
   app.get('/api/disputes/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(await store!.disputeRead!(res.locals.actor,id.data));}catch(e){next(e);}});
   app.post('/api/disputes/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id),key=uuidSchema.safeParse(req.get('Idempotency-Key')),body=disputeSchema.safeParse(req.body);if(!id.success||!key.success||!body.success){res.status(400).json({error:'Invalid dispute.'});return;}try{res.json(await store!.disputeSubmit!(res.locals.actor,id.data,key.data,body.data));}catch(e){next(e);}});
   app.get('/api/escalation/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id);if(!id.success){res.status(400).json({error:'Invalid case.'});return;}try{res.json(await store!.escalationRead!(res.locals.actor,id.data));}catch(e){next(e);}});

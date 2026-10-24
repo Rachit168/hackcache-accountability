@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { complaintSchema, type CaseRecord } from '../domain/complaint';
 import { initialLanguage, translate, type CopyKey, type Language } from './i18n';
@@ -9,6 +9,7 @@ import { createReceiptRecovery } from './receipt-recovery';
 import { attachLeaveWarning, copyExactReference, fieldErrorSummary, shouldWarnOnLeave } from './form-usability';
 import type { FormError } from './form-types';
 import './style.css';
+import {Welcome,FindCase} from './welcome';
 import { StaffSession, WorkflowWorkspace } from './workflow';
 import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
@@ -86,11 +87,12 @@ function App() {
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>
     <header className="site-header">
       <Link to="/" className="brand" aria-label={t('brandHome')}><span className="brand-mark" aria-hidden="true">ज</span><span>Janvaani</span></Link>
-      <div className="header-tools"><nav aria-label={t('workspace')}><Link to="/">{t('workspace')}</Link><a href="#privacy">{t('privacy')}</a></nav><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
+      <div className="header-tools"><nav aria-label={t('workspace')}><Link to="/">{language==='hi'?'होम':'Home'}</Link><Link to="/file">{language==='hi'?'शिकायत दर्ज करें':'File a complaint'}</Link><Link to="/staff">{language==='hi'?'कार्यालय डेमो':'Staff demo'}</Link></nav><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
     </header>
     <main>
       <Routes>
-        <Route path="/" element={<>
+        <Route path="/" element={<Welcome language={language} setLanguage={setLanguage} signedIn={signedIn} ready={!!config?.ready} onStart={()=>void signIn()} busy={busy}/>} />
+        <Route path="/file" element={<>
           <div className="page-heading"><p className="sample-label">{t('desk')}</p><h1>{t('fileTitle')}</h1><p>{t('fileIntro')}</p></div>
           {!config ? error ? <section className="notice" role="alert"><h2>{t('unavailable')}</h2><p>{t(error)}</p><button type="button" onClick={retryConfig}>{t('retry')}</button></section> : <p className="live-message" role="status">{t('connecting')}</p>
             : !config.ready ? <section className="notice" role="status" aria-labelledby="setup-title"><h2 id="setup-title">{t('setupTitle')}</h2><p>{t('setupBody')}</p><button type="button" onClick={retryConfig}>{t('retry')}</button></section>
@@ -99,6 +101,7 @@ function App() {
           {error && config && <p className="error" role="alert">{t(error)}</p>}
           <ComplaintForm enabled={signedIn && !!config?.ready} language={language} t={t} />
         </>} />
+        <Route path="/cases" element={<FindCase language={language}/>} />
         <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
         <Route path="/staff" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
         <Route path="/staff/:id" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
@@ -117,6 +120,7 @@ function LanguageToggle({ language, setLanguage, t }: { language: Language; setL
 
 function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: Language; t: Translator }) {
   const navigate = useNavigate();
+  const [step,setStep] = useState(0);
   const [narrative, setNarrative] = useState('');
   const [concerns, setConcerns] = useState<Concern[]>(() => [
     { uiId: crypto.randomUUID(), type: 'service', wording: '' }, { uiId: crypto.randomUUID(), type: 'conduct', wording: '' },
@@ -158,7 +162,9 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
     setConcerns((items) => items.map((item) => item.uiId === uiId ? { ...item, ...update } : item));
   }
   async function submit(event: React.FormEvent) {
-    event.preventDefault(); setError(undefined);
+    event.preventDefault();
+    if(step!==3){setStep(3);return;}
+    setError(undefined);
     if(!evidenceReady)return;
     const parsed = complaintSchema.safeParse(payload);
     if (!parsed.success) {
@@ -171,7 +177,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         }
         if (issue.path[0] === 'declaration') next.declaration = 'declarationError';
       }
-      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); return;
+      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); setStep(next.narrative?0:concerns.some(c=>next[c.uiId])?1:3); return;
     }
     setFieldErrors({}); setBusy(true); setAttempt(true);
     try {
@@ -179,21 +185,28 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
       const receipt = await api<{ id: string }>('/complaints', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({...parsed.data,...(review?{intakeReviewId:review.id}:{})}) });
       submitted.current = true;
       navigate(`/cases/${receipt.id}`);
-    } catch { setError('submitError'); }
+    } catch (caught) { setError('submitError'); if(caught instanceof ApiError && [400,403,409,413,422].includes(caught.status)){setAttempt(false);setKey(crypto.randomUUID());} }
     finally { setBusy(false); }
   }
 
-  return <div className="form-layout">
+  function nextStep(){
+    if(step===0&&!narrative.trim()){setFieldErrors(v=>({...v,narrative:'narrativeError'}));document.getElementById('narrative')?.focus();return;}
+    if(step===1){const missing=concerns.filter(c=>!c.wording.trim());if(missing.length){setFieldErrors(v=>({...v,...Object.fromEntries(missing.map(c=>[c.uiId,'concernError' as const]))}));document.getElementById(missing[0].uiId+'-wording')?.focus();return;}}
+    if(step===2&&!evidenceReady)return;
+    setStep(v=>Math.min(3,v+1));window.scrollTo({top:0,behavior:'instant'});
+  }
+  const stepNames=language==='hi'?['घटना का विवरण','मुख्य मुद्दे','साक्ष्य और AI','समीक्षा व भेजें']:['Your story','Issues to address','Evidence & assistance','Review & submit'];
+  return <div className="form-layout wizard-layout">
     <aside className="help-column" aria-label={t('sideNav')}>
-      <nav className="section-nav" aria-label={t('sideNav')}><a href="#story-title">{t('sectionStory')}</a><a href="#concerns-title">{t('sectionIssues')} <span className="count-pill">{concerns.length}</span></a><a href="#review-title">{t('sectionReview')}</a></nav>
+      <nav className="wizard-progress" aria-label={language==='hi'?'शिकायत के चरण':'Complaint steps'}><ol>{stepNames.map((name,i)=><li key={name} aria-current={step===i?'step':undefined}><button type="button" disabled={busy||attempt||i>step} className={i===step?'current':i<step?'complete':''} onClick={()=>setStep(i)}><span className="step-number">{i+1}</span><span>{name}</span></button></li>)}</ol></nav>
       <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
       <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
     </aside>
-    <form onSubmit={submit} className="form-surface" noValidate>
+    <form onSubmit={submit} className="form-surface" data-wizard-step={step} noValidate><div className="wizard-stage-heading"><p>{language==='hi'?`चरण ${step+1} / 4`:`Step ${step+1} of 4`}</p><h2>{stepNames[step]}</h2><span>{language==='hi'?'आपकी जानकारी भेजने तक सहेजी नहीं जाएगी।':'Your entries are not saved until submission.'}</span></div>
       {error === 'reviewFields' && summaryItems.length > 0 && <section ref={summaryRef} className="error-summary" role="alert" aria-labelledby="error-summary-title" tabIndex={-1}>
         <h2 id="error-summary-title">{t('reviewFields')}</h2><ul>{summaryItems.map((item) => <li key={item.field}><a href={`#${item.targetId}`} onClick={(event) => { event.preventDefault(); const control = document.getElementById(item.targetId); control?.focus(); control?.scrollIntoView({ behavior: 'auto', block: 'center' }); }}>{item.labelKey === 'concern' ? `${t(item.labelKey)} ${item.concernNumber}` : t(item.labelKey)}: {t(item.error)}</a></li>)}</ul>
       </section>}
-      <section className="form-section" aria-labelledby="story-title">
+      <section className="form-section" data-wizard-stage="0" aria-labelledby="story-title">
         <h2 id="story-title">{t('storyTitle')}</h2><p className="section-intro">{t('storyIntro')}</p>
         <label className="field-label" htmlFor="narrative">{t('account')}</label>
         <textarea id="narrative" aria-describedby={`narrative-help${fieldErrors.narrative ? ' narrative-error' : ''}`} aria-invalid={!!fieldErrors.narrative} maxLength={12000} rows={6} value={narrative} onChange={(event) => { changed('narrative'); setNarrative(event.target.value); }} placeholder={t('narrativePlaceholder')} disabled={busy||attempt} />
@@ -201,16 +214,16 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         {fieldErrors.narrative && <p className="field-error" id="narrative-error">{t(fieldErrors.narrative)}</p>}
         <p className="counter" aria-live="polite">{narrative.length.toLocaleString(locale)} / 12,000 {t('characters')}</p>
       </section>
-      <section className="form-section" aria-labelledby="concerns-title">
-        <h2 id="concerns-title">{t('issuesTitle')}</h2><p className="section-intro">{t('issuesIntro')}</p>
+      <section className="form-section" data-wizard-stage="1" aria-labelledby="concerns-title">
+        <h2 id="concerns-title">{language==='hi'?'आप किन सवालों का जवाब चाहते हैं?':'What do you want answered?'}</h2><p className="section-intro">{t('issuesIntro')}</p>
         {concerns.map((concern, index) => {
           const field = concern.uiId; const errorId = `${field}-error`; const wordingId = `${field}-wording`;
           return <fieldset className="concern" key={field}>
             <legend className="concern-legend"><span>{t('concern')} {index + 1}</span><label className="type-control"><span className="sr-only">{t('concernType', { n: index + 1 })}</span><select aria-label={t('concernType', { n: index + 1 })} value={concern.type} disabled={busy||attempt} onChange={(event) => { changed(); updateConcern(field, { type: event.target.value as ConcernType }); }}>
-              <option value="service">{t('service')}</option><option value="conduct">{t('conduct')}</option><option value="mixed">{t('mixed')}</option>
+              <option value="service">{language==='hi'?'सेवा, देरी या जानकारी':'Service, delay or information'}</option><option value="conduct">{language==='hi'?'कर्मचारी का व्यवहार':'Staff behaviour'}</option><option value="mixed">{language==='hi'?'दोनों':'Both'}</option>
             </select></label></legend>
             <p className="field-help type-help">{t(`${concern.type}Help` as CopyKey)}</p>
-            <label className="sr-only" htmlFor={wordingId}>{t('concern')} {index + 1}: {t('account')}</label>
+            <label className="field-label" htmlFor={wordingId}>{language==='hi'?'इस मुद्दे को अपने शब्दों में लिखें':'Describe this issue in your own words'}</label>
             <textarea id={wordingId} aria-describedby={fieldErrors[field] ? errorId : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy||attempt} onChange={(event) => { changed(field); updateConcern(field, { wording: event.target.value }); }} placeholder={t('wordingPlaceholder')} />
             {fieldErrors[field] && <p className="field-error" id={errorId}>{t(fieldErrors[field])}</p>}
             <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}>{t('removeConcern')} {index + 1}</button>}</div>
@@ -219,24 +232,30 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}>{t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
-      <EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
+      <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
       <IntakeAssistant api={api} language={language} text={narrative} evidenceIds={allEvidenceIds} disabled={!enabled||busy||attempt||!evidenceReady} onSource={id=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();setNarrative(draft.body.report.allegation.value);setConcerns(draft.body.report.concerns.map(c=>({uiId:crypto.randomUUID(),type:c.type,wording:c.field.value})));setDeclaration(false);}}/>
       {intakeDraft&&<p role="status">{language==='hi'?'AI संस्करण चुना गया है। अपने सुधार करें और भेजने से पहले घोषणा की पुष्टि करें।':'AI revision selected. Make your corrections and confirm the declaration before submission. Citizen additions and edits carry no invented AI citations.'}</p>}
       {!evidenceReady&&<p role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
-      <section className="form-section submit-section" aria-labelledby="review-title">
+      </div><section className="form-section submit-section" data-wizard-stage="3" aria-labelledby="review-title"><div className="review-recap"><h3>{language==='hi'?'भेजने से पहले जाँचें':'Check before submitting'}</h3><p className="preserve">{narrative}</p><ol>{concerns.map(c=><li key={c.uiId} className="preserve">{c.wording}</li>)}</ol><p>{language==='hi'?`साक्ष्य संदर्भ: ${allEvidenceIds.length}`:`Evidence references: ${allEvidenceIds.length}`}</p></div>
         <h2 id="review-title">{t('reviewTitle')}</h2>
         <label className="declaration" htmlFor="declaration"><input id="declaration" type="checkbox" checked={declaration} disabled={busy||attempt} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} /><span>{t('declaration')}</span></label>
         {fieldErrors.declaration && <p className="field-error" id="declaration-error">{t(fieldErrors.declaration)}</p>}
         {error && <p role="alert" className="error">{t(error)}</p>}
         <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
         {!enabled && <p className="field-help">{t('startSessionToSubmit')}</p>}<p className="field-help">{t('privateReceipt')}</p>
-      </section>
+      </section><nav className="wizard-actions" aria-label={language==='hi'?'चरण नेविगेशन':'Step navigation'}>{step>0&&<button type="button" className="secondary-button" disabled={busy||attempt} onClick={()=>{setStep(v=>Math.max(0,v-1));window.scrollTo({top:0,behavior:'instant'});}}>{language==='hi'?'पिछला':'Back'}</button>}{step<3&&<button type="button" disabled={busy||attempt||step===2&&!evidenceReady} onClick={nextStep}>{language==='hi'?'आगे बढ़ें':'Continue'} <span aria-hidden="true">→</span></button>}</nav>
     </form>
   </div>;
 }
 
 function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: boolean; language: Language; t: Translator }) {
   const { id } = useParams();
+  const [caseParams,setCaseParams] = useSearchParams();
+  const allowedPanels=['overview','evidence','timeline','response','audit','next'] as const;
+  type CasePanel=typeof allowedPanels[number];
+  const requested=caseParams.get('section');
+  const activePanel:CasePanel=allowedPanels.includes(requested as CasePanel)?requested as CasePanel:'overview';
+  const switchPanel=(panel:CasePanel)=>{const params=new URLSearchParams(caseParams);params.set('section',panel);setCaseParams(params);window.scrollTo({top:0,behavior:'instant'});};
   const [record, setRecord] = useState<CaseRecord>();
   const [state, setState] = useState<'loading' | 'ready' | 'not-found' | 'unavailable' | 'auth-error'>('loading');
   const [loadedId, setLoadedId] = useState<string>();
@@ -300,18 +319,19 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     });
     setCopyState(copied ? 'success' : 'failure');
   }
-  return <article className="receipt" aria-labelledby="receipt-title">
-    <div className="receipt-heading"><p className="sample-label">{t('desk')}</p><h1 id="receipt-title">{t('receiptTitle')}</h1><span className="status">{t('receiptStatusSubmitted')}</span></div>
+  return <article className="receipt case-dashboard" aria-labelledby="receipt-title">
+    <div className="receipt-heading"><p className="sample-label">{language==='hi'?'आपका निजी केस':'Your private case'} · {t('desk')}</p><h1 id="receipt-title">{language==='hi'?'शिकायत की जानकारी':'Your complaint'}</h1><span className="status">{t('receiptStatusSubmitted')}</span><p className="receipt-lead">{language==='hi'?'यह मामला केवल काल्पनिक प्रदर्शन में दर्ज है। हर भाग को अलग खोलें।':'This case is recorded in the fictional demo only. Choose what you want to review below.'}</p></div>
     <dl className="receipt-meta"><div><dt>{t('reference')}</dt><dd className="reference" id="case-reference">{loadedRecord.id}</dd></div><div><dt>{t('submitted')}</dt><dd><time dateTime={loadedRecord.submittedAt}>{new Date(loadedRecord.submittedAt).toLocaleString(locale)}</time></dd></div><div><dt>{t('office')}</dt><dd>{t('desk')}</dd></div></dl>
-    <section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
+    <nav className="case-tabs" aria-label={language==='hi'?'केस का मेनू':'Case navigation'}>{([['overview',language==='hi'?'सारांश':'Overview'],['evidence',language==='hi'?'साक्ष्य':'Evidence'],['timeline',language==='hi'?'समयक्रम':'Timeline'],['response',language==='hi'?'कार्यालय जवाब':'Office reply'],['audit',language==='hi'?'जवाब जाँच':'Response check'],['next',language==='hi'?'अगला कदम':'Next steps']] as [CasePanel,string][]).map(([key,label])=><button key={key} type="button" className={activePanel===key?'active':''} aria-current={activePanel===key?'page':undefined} onClick={()=>switchPanel(key)}>{label}</button>)}</nav>
+    {activePanel==='overview'&&<section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
       <ol className="saved-concerns">{loadedRecord.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>
-    </section>
-    <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
-    {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
-    <RecordVerification api={api} language={language} id={loadedRecord.id}/>
-    <IntakeProvenance api={api} language={language} id={loadedRecord.id}/>
-    <EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>
-    <WorkflowWorkspace api={api} language={language} caseId={id}/>
+    </section>}
+    {activePanel==='overview'&&<><p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/file">{t('another')}</Link></div>
+    {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}</>}
+    {activePanel==='evidence'&&<><RecordVerification api={api} language={language} id={loadedRecord.id}/><IntakeProvenance api={api} language={language} id={loadedRecord.id}/></>}
+    {activePanel==='timeline'&&<EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>}
+    <WorkflowWorkspace api={api} language={language} caseId={id} panel={activePanel==='response'?'response':activePanel==='audit'?'audit':activePanel==='next'?'next':'none'}/>
+    <nav className="case-next-actions" aria-label={language==='hi'?'अगला भाग':'Next section'}>{activePanel!=='overview'&&<button type="button" className="secondary-button" onClick={()=>switchPanel(allowedPanels[allowedPanels.indexOf(activePanel)-1])}>{language==='hi'?'← पिछला':'← Previous'}</button>}{activePanel!=='next'&&<button type="button" onClick={()=>switchPanel(allowedPanels[allowedPanels.indexOf(activePanel)+1])}>{language==='hi'?'अगला भाग →':'Next section →'}</button>}</nav>
   </article>;
 }
 

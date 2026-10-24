@@ -1,0 +1,10 @@
+import {describe,it,expect} from 'vitest';
+import {escalationController,type EscalationView} from '../web/escalation-state';
+import {escalationStatusLabels,escalationReason} from '../web/escalation';
+const view:EscalationView={policy:'DEMO-ESC-1',status:'awaiting_acknowledgement',canManage:true,history:[]};
+describe('escalation UI command recovery',()=>{
+ it('retains an uncertain advance key and does not turn retry into another clock step',async()=>{const keys:string[]=[];let attempts=0;const c=escalationController((async(_path:string,init?:RequestInit)=>{if(!init)return view;keys.push((init.headers as Record<string,string>)['Idempotency-Key']);if(++attempts===1)throw Error('connection');return {};}) as never,'fictional');await expect(c.send('advance')).rejects.toThrow();await c.send('advance');expect(keys[0]).toBe(keys[1]);expect(c.pending).toBeUndefined();});
+ it('confirmed writes with failed readback retry only GET',async()=>{let posts=0,reads=0;const c=escalationController((async(_path:string,init?:RequestInit)=>{if(init){posts++;return {};}if(++reads===1)throw Error('readback');return view;}) as never,'fictional');await expect(c.send('evaluate')).rejects.toThrow();expect(c.pending?.confirmed).toBe(true);await c.send('evaluate');expect(posts).toBe(1);expect(reads).toBe(2);});
+ it('rejects a different action while an uncertain command is retained',async()=>{const c=escalationController((async()=>{throw Error('uncertain');}) as never,'fictional');await expect(c.send('advance')).rejects.toThrow();await expect(c.send('evaluate')).rejects.toThrow('Pending command');expect(c.pending?.action).toBe('advance');});
+ it('has English and Hindi labels for every policy state and escalation reason',()=>{expect(Object.keys(escalationStatusLabels.hi).sort()).toEqual(Object.keys(escalationStatusLabels.en).sort());for(const text of Object.values(escalationStatusLabels.hi))expect(text).toMatch(/[\u0900-\u097f]/);for(const reason of ['Acknowledgement deadline expired','Substantive response deadline expired','Response unverified; bounded deadline expired'])expect(escalationReason(reason,'hi')).toMatch(/[\u0900-\u097f]/);});
+});

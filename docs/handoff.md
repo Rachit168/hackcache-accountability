@@ -1,10 +1,12 @@
 # HC-P6 current handoff
 
-## Current handoff — HC-P6-B03 Gate A implemented
+## Current handoff — HC-P6-B03 Gates A and B implemented
 
 Migration 009 is applied: DEMO-ESC-1 three-level fictional authority/deadline policy, per-case protected clock, bounded one-time investigation, explicit evaluation, transactionally serialized escalation, durable retries and canonical ledger events. Responses/claimed resolution do not establish independent resolution or citizen agreement. Owners may evaluate activated cases; only assigned reviewers control the fictional clock/observations. Office workflows remain separate; no private evidence is automatically forwarded.
 
-Gate A: 84 local tests/typecheck, eight real escalation assertion groups (including independent PostgreSQL backends with observed blocking), corrected foundation permission/RLS checks and affected office/workflow connected suite passed. Retained B02 snapshot stayed unchanged. See [b03-evidence.md](b03-evidence.md) for the initial transient 503, race-harness/bootstrap correction, permission-probe key correction, commands and limits. Gate B is not yet started at this mandatory backend commit; proceed only within the current B03 time/usage budget. B04 Resolution Audit/appeals remain deferred. This is self-verification, not independent acceptance.
+Gate A was verified and committed as 73e3fba before Gate B. Eight real escalation assertion groups (including independent PostgreSQL backends with observed blocking), corrected foundation permission/RLS checks and affected office/workflow connected suite passed. Retained B02 snapshot stayed unchanged. Gate B adds the compact bilingual timeline, reason/deadline/history/next action and reviewer-only fixed-step demo controls, with safe command/readback retries. Final 88 tests/typecheck/build passed. Real browser case f6854df4-b94c-40fb-8c1a-7cd883bd10d5 escalated municipal → district through reviewer activation/+24h/evaluation, persisted after citizen reload, passed ledger/display verification, and denied unrelated/office reads. Final English/Hindi/390px screens were inspected.
+
+See [b03-evidence.md](b03-evidence.md) for observed failures/fixes, exact commands, screenshots and limitations. Evaluation is explicit, not scheduled; fictional higher-authority observations do not forward raw evidence or establish institutional identity. At 16:24 IST usage was 72% used from a 54% baseline; publication-time figures are in chat. B04 starts from final published main with 009 applied: scope Resolution Audit separately, preserving these distinctions; appeals remain deferred. This is self-verification, not independent acceptance.
 
 ## Historical handoff — HC-P6-B02 implemented and self-verified
 

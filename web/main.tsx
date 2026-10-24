@@ -13,6 +13,7 @@ import { StaffSession, WorkflowWorkspace } from './workflow';
 import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
 import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assistant';
+import {EscalationTimeline} from './escalation';
 import {safeFilename} from '../domain/intake-ai';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
@@ -309,6 +310,7 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
     <RecordVerification api={api} language={language} id={loadedRecord.id}/>
     <IntakeProvenance api={api} language={language} id={loadedRecord.id}/>
+    <EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>
     <WorkflowWorkspace api={api} language={language} caseId={id}/>
   </article>;
 }

@@ -48,6 +48,7 @@ try{
   await db.query('COMMIT');committed=true;
  }catch(error){await db.query('ROLLBACK').catch(()=>{});throw error;}finally{db.release();}
  console.log('Authorized staff account created:',kind,office??'assigned reviewer',assignedCase?'with one initial case assignment':'with no initial case assignment');
+ console.log('New staff actor ID for private administrator assignments:',userId);
  console.log('Sign in at /staff with the separately configured staff email and password. No JSON file is required.');
 }catch{
  if(!committed)await client.auth.admin.deleteUser(userId).catch(()=>{});

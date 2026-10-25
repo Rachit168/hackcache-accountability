@@ -663,3 +663,14 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
  .wizard-evidence>.ai-attachment-confirmation,.wizard-evidence>.wizard-evidence-notice{margin:16px 16px 19px;padding:14px}
  .wizard-evidence .ai-apply-help{padding:12px}
 }
+
+
+/* Citizen-facing AI follow-up suggestions: readable and clearly optional. */
+.report-draft .ai-missing-list{margin:10px 0 20px;padding-left:23px;display:grid;gap:9px;min-width:0}
+.report-draft .ai-missing-list li{padding-left:3px;line-height:1.55;overflow-wrap:anywhere}
+.report-draft>.field-help{line-height:1.6;margin:8px 0 12px}
+.office-action-complete{margin:18px 0;padding:17px 19px;border:1px solid #c8ddd0;border-left:4px solid #2d795d;background:#f2f8f3;border-radius:8px;min-width:0}
+.office-action-complete strong{display:block;margin:0 0 8px;font-size:17px;color:#215b45}
+.office-action-complete p{line-height:1.65;color:#395b4a;margin:0 0 15px}
+.office-action-complete button{margin:0}
+@media(max-width:560px){.office-action-complete{padding:14px}.report-draft .ai-missing-list{padding-left:20px}}

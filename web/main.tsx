@@ -19,6 +19,7 @@ import {safeFilename,fileSize} from '../domain/intake-ai';
 import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
 import {operatorApiFor} from './operator-api';
 import {StaffPortal} from './staff-portal';
+import {staffAccessAllowed} from './staff-access';
 import {authenticatedFetch} from './api-transport';
 import {visitWizard,continueWizard} from './wizard-state';
 import type {EvidenceSummary} from './evidence-summary';
@@ -76,7 +77,10 @@ function App() {
           const operator=createClient(value.url,value.publishableKey,{auth:{storageKey:'janvaani-operator-session'}});
           setOperatorClient(operator);
           const officeSession=await operator.auth.getSession();
-          if(active)setOperatorSignedIn(!!officeSession.data.session);
+          // A cached identity is not authorization. On reload, fail closed until the
+          // server confirms a staff role through the same scoped request as login.
+          const allowed=await staffAccessAllowed(!!officeSession.data.session,()=>operatorApiFor(operator,api)<{kind:string}>('/workflow'));
+          if(active)setOperatorSignedIn(allowed);
           if (hotData) hotData.auth = auth;
           const { data } = await auth.auth.getSession();
           if (active) setSignedIn(!!data.session);

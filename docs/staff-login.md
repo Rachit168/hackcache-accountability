@@ -38,6 +38,10 @@ try {
 
 Use `reviewer` instead of `office` to create a reviewer account without an initial assignment; pass `reviewer CASE_UUID` to assign a specific existing case. Reviewers **do not** see every citizen complaint by default. This is intentional privacy protection. Office accounts see only versions released to their fictional department; they do not see raw submissions.
 
+To add an existing complaint to a reviewer inbox, a **project administrator**, not the citizen or reviewer, explicitly assigns the already-provisioned actor ID:
+`npx tsx database/assign-reviewer.ts REVIEWER_UUID CASE_UUID`
+This does not create an account, cannot assign unrelated case scopes, and does not replace any pre-existing reviewer assignment. Case IDs are assignment metadata used by the administrator, **not** a login requirement for staff.
+
 After provisioning, the employee logs in at `/staff` with the account email and password and chooses **Sign out securely** when finished. Do not distribute .cache session JSON files as real workplace credentials. Local development only retains a collapsed legacy session-import control for existing automated/manual fixture tests; production does not render it.
 
 **Not verified here:** actual new email-password account provisioning, Supabase email-provider configuration, and browser login, until an authorized operator executes this script with their private project credentials. Unit/CI builds do not establish those claims.

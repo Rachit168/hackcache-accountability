@@ -11,6 +11,33 @@ export function validateReport(value:unknown,sources:Source[]):AIReport{
  for(const f of fields){if(f.value==='not stated'){if(f.citations.length)throw Error('Missing field cannot claim sources');continue;}if(!f.citations.length)throw Error('Source required');for(const c of f.citations){const s=sources.find(s=>s.id===c.sourceId);if(!s?.segments[c.segment]?.text.includes(c.quote))throw Error('Unsupported source or quotation');}}
  return report;
 }
+/**
+ * Repair only formatting of existing source quotations. Some structured-output
+ * models fold line breaks or multiple spaces into a single space. The stored
+ * source remains authoritative: never trust an invented paraphrase or source ID.
+ * Require an unambiguous, case-sensitive whitespace-equivalent substring.
+ */
+export function canonicalizeReportWhitespace(value:unknown,sources:Source[]):AIReport{
+ const parsed=reportSchema.parse(value);
+ const repair=(item:typeof parsed.allegation)=>{
+  const citations=item.citations.map(c=>{
+   const original=sources.find(s=>s.id===c.sourceId)?.segments[c.segment]?.text;
+   if(!original||original.includes(c.quote))return c;
+   const trimmed=c.quote.trim();
+   // Escape every regex metacharacter before relaxing runs of whitespace only.
+   if(!trimmed||!/\s/.test(trimmed))return c;
+   const pattern=trimmed.split(/\s+/).map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,'\\export function preparedReport(sources:Source[]):AIReport{')).join('\\s+');
+   const re=new RegExp(pattern,'g');
+   const found=[...original.matchAll(re)];
+   if(found.length!==1)return c;
+   return {...c,quote:found[0][0]};
+  });
+  return {...item,citations};
+ };
+ const normalized={...parsed,allegation:repair(parsed.allegation),time:repair(parsed.time),location:repair(parsed.location),department:repair(parsed.department),concerns:parsed.concerns.map(c=>({...c,field:repair(c.field)})),timeline:parsed.timeline.map(repair)};
+ return validateReport(normalized,sources);
+}
+
 export function preparedReport(sources:Source[]):AIReport{
  const s=sources.find(s=>s.segments.length===1&&s.segments[0].text===fixtureText);if(!s||sources.some(s=>s.segments.length!==1||s.segments[0].text!==fixtureText))throw Error('PREPARED_FIXTURE_ONLY');
  const f=(value:string,quote:string)=>({value,citations:[{sourceId:s.id,segment:0,quote}]});const absent={value:'not stated',citations:[]};

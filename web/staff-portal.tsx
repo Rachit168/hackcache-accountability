@@ -17,6 +17,12 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
   try{
    const result=await client.auth.signInWithPassword({email:email.trim(),password});
    if(result.error||!result.data.session)throw Error();
+   // A valid Supabase password is not a staff role. Verify the server-scoped queue
+   // before granting entry to the staff interface.
+   const authorized=await api<{kind:string}>('/workflow');
+   if(!['reviewer','office'].includes(authorized.kind)){
+    await client.auth.signOut();throw Error('NO_STAFF_ROLE');
+   }
    setPassword('');sessionReady();
   }catch{setMessage(hi?'लॉगिन नहीं हो सका। कर्मचारी खाता, पासवर्ड या सेवा जाँचें। नागरिक खाते से प्रवेश नहीं मिलता।':'Sign-in unsuccessful. Check your provisioned staff account, password and connection. Citizen accounts have no staff access.');}
   finally{setBusy(false);}

@@ -611,3 +611,24 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
  .confirmed-recording{grid-template-columns:minmax(0,1fr);gap:12px;padding:13px}
  .confirmed-recording>.danger-button{justify-self:start}
 }
+
+
+/* Role-scoped case journey. All stages derive from received server records. */
+.staff-journey{margin:20px 0 22px;padding:21px 22px;background:#f7faf7;border:1px solid #d3ded6;border-radius:10px;min-width:0}
+.staff-journey-heading{display:flex;gap:22px;align-items:center;justify-content:space-between;min-width:0}
+.staff-journey-heading>div{min-width:0;max-width:660px}
+.staff-journey-heading h3{border:0!important;padding:0!important;margin:5px 0 9px!important;font-size:clamp(20px,2vw,25px)!important;line-height:1.35}
+.staff-journey-heading p:not(.eyebrow){margin:5px 0;color:#3f5b50;font-size:15px;line-height:1.65}
+.staff-journey-heading button{flex:0 0 auto;max-width:100%;text-align:center}
+.staff-journey-steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0 12px;padding:0}
+.staff-journey-steps li{display:flex;align-items:flex-start;gap:11px;min-width:0;padding:15px 11px;border-top:4px solid #c8d5ce;background:#fff}
+.staff-journey-steps li.done{border-top-color:#27735b}
+.staff-journey-steps li.current{border-top-color:#c28a32;background:#fffaf2}
+.staff-journey-marker{display:grid;place-items:center;width:29px;height:29px;flex:0 0 29px;border-radius:50%;background:#dfe8e1;color:#304e42;font-size:14px;font-weight:800}
+.staff-journey-steps li.done .staff-journey-marker{background:#27735b;color:#fff}
+.staff-journey-steps li.current .staff-journey-marker{background:#a66b1c;color:#fff}
+.staff-journey-steps li>div{min-width:0;display:grid;gap:7px}
+.staff-journey-steps strong{font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.staff-journey-steps small{color:#526c60;font-size:13px;font-weight:650}
+.staff-journey>.field-help{margin:12px 0 0}
+@media(max-width:760px){.staff-journey-heading{align-items:stretch;flex-direction:column;gap:14px}.staff-journey-heading button{align-self:flex-start}.staff-journey-steps{grid-template-columns:1fr;gap:8px;margin-top:17px}.staff-journey{padding:15px}}

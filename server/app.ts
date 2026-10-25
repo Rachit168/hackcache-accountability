@@ -23,7 +23,7 @@ export function createApp({config,store,verify}:Dependencies) {
   app.get('/api/fixtures/intake.wav',(_req,res)=>res.type('audio/wav').sendFile(path.resolve('content/b02/fictional-report.wav')));
   app.use('/api',async(req,res,next)=>{
     const match=/^Bearer ([^\s]+)$/.exec(req.headers.authorization??'');
-    if(!match){res.status(401).json({error:'Sign in with a managed citizen account.'});return;}
+    if(!match){res.status(401).json({error:'A single valid managed session is required.'});return;}
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
   });
@@ -95,7 +95,7 @@ export function createApp({config,store,verify}:Dependencies) {
     try{const record=await store!.read(res.locals.actor,id.data);if(!record){res.status(404).json({error:'Complaint not found.'});return;}res.json(record);}catch(error){next(error);}
   });
   app.get('/api/workflow',async(_req,res,next)=>{
-    try { res.json(await store!.workflowRead!(res.locals.actor)); } catch(error){next(error);}
+    try { const view=await store!.workflowRead!(res.locals.actor);if(!view||!['office','reviewer'].includes(view.kind)){res.status(403).json({error:'Provisioned staff access required.'});return;}res.json(view); } catch(error){next(error);}
   });
   app.get('/api/workflow/:id',async(req,res,next)=>{
     const id=uuidSchema.safeParse(req.params.id); if(!id.success){res.status(400).json({error:'Invalid case ID.'});return;}

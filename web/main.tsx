@@ -18,6 +18,7 @@ import {EscalationTimeline} from './escalation';
 import {safeFilename} from '../domain/intake-ai';
 import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
 import {operatorApiFor} from './operator-api';
+import {authenticatedFetch} from './api-transport';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -28,13 +29,9 @@ const hotData = import.meta.hot?.data as HotData | undefined;
 let auth = hotData?.auth;
 
 async function api<T = { error?: string }>(path: string, init: RequestInit = {}): Promise<T> {
-  const session = await auth?.auth.getSession();
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, {
-      ...init,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.data.session?.access_token ?? ''}`, ...init.headers },
-    });
+    response = await authenticatedFetch(path,init,async()=>(await auth?.auth.getSession())?.data.session?.access_token);
   } catch { throw new ApiError(0, 'network'); }
   if(response.ok&&response.headers.get('Content-Disposition')?.startsWith('attachment')){const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;const encoded=response.headers.get('Content-Disposition')?.split("filename*=UTF-8''")[1];link.download=safeFilename(encoded?decodeURIComponent(encoded):'evidence');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return undefined as T;}
   const body = await response.json().catch(() => ({})) as T & { error?: string };

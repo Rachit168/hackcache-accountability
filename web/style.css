@@ -565,3 +565,22 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
  .staff-case-list li a{justify-content:center}.staff-case-tabs button{flex:1 1 120px}
  .confirmed-recordings{margin:16px 12px 18px;padding:14px}
 }
+
+/* Timeline state drawn from the backend's fictional clock and recorded level. */
+.escalation-dashboard{border:1px solid #d4e1d8;padding:22px;background:#f7faf6;margin:21px 0}
+.escalation-clock{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.escalation-clock>div{min-width:0;padding:17px 20px;background:#fff;border:1px solid #cddcd2;border-top:5px solid #367c66;display:flex;flex-direction:column;gap:8px}
+.escalation-clock small{font-size:13px;color:#4c5e57;font-weight:700}
+.escalation-clock strong{font-size:clamp(18px,2.2vw,25px);line-height:1.28;color:#1b4e3d}
+.escalation-clock span{font-size:15px;font-weight:700;color:#415d54}
+.escalation-deadline.deadline-soon{border-top-color:#d69a3a;background:#fffaf0}
+.escalation-deadline.deadline-urgent{border-top-color:#b44639;background:#fff3f0}
+.escalation-deadline.deadline-urgent strong{color:#97372d}
+.escalation-track{display:flex;list-style:none;padding:0;margin:24px 0;gap:8px;counter-reset:none}
+.escalation-track li{min-width:0;flex:1;display:flex;align-items:center;gap:9px;position:relative;border-top:4px solid #cdd8d1;padding:12px 3px}
+.escalation-track li.complete{border-top-color:#206d59}
+.escalation-track li>span{width:28px;height:28px;flex:0 0 28px;display:grid;place-items:center;border-radius:50%;background:#d6e2d9;font-size:14px;font-weight:800}
+.escalation-track li.complete>span{background:#206d59;color:#fff}
+.escalation-track li small{font-size:13px;line-height:1.35;font-weight:700;color:#3a554b}
+.escalation-track li[aria-current="step"] small{color:#145442}
+@media(max-width:650px){.escalation-clock{grid-template-columns:1fr}.escalation-dashboard{padding:14px}.escalation-track{flex-direction:column;gap:0}.escalation-track li{border-top:0;border-left:4px solid #cdd8d1;padding:12px 10px}.escalation-track li.complete{border-top:0;border-left-color:#206d59}}

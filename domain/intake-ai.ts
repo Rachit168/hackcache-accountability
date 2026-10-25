@@ -8,6 +8,10 @@ export type AIReport=z.infer<typeof reportSchema>;
 export const generationSchema=z.object({text:z.string().max(12000),evidenceIds:z.array(z.string().uuid()).max(5),mode:z.enum(['prepared','live']),concerns:z.array(z.object({type:z.enum(['service','conduct','mixed']),wording:z.string().trim().min(1).max(2000)}).strict()).max(30).optional()}).strict();
 export function validateReport(value:unknown,sources:Source[]):AIReport{
  const report=reportSchema.parse(value);const fields=[report.allegation,report.time,report.location,report.department,...report.concerns.map(c=>c.field),...report.timeline];
+ // A citizen asking for an answer does not establish the event as true.
+ for(const f of [report.allegation,report.time,report.location,report.department,...report.timeline]){
+  if(f.citations.some(c=>c.sourceId==='requested-answers'))throw Error('Citizen questions are not evidence of events');
+ }
  for(const f of fields){if(f.value==='not stated'){if(f.citations.length)throw Error('Missing field cannot claim sources');continue;}if(!f.citations.length)throw Error('Source required');for(const c of f.citations){const s=sources.find(s=>s.id===c.sourceId);if(!s?.segments[c.segment]?.text.includes(c.quote))throw Error('Unsupported source or quotation');}}
  return report;
 }

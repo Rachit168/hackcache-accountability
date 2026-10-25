@@ -597,3 +597,17 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 @media(max-width:650px){.legal-aid-action{grid-template-columns:1fr;padding:18px;gap:14px}.legal-aid-contact{border-left:0;border-top:1px solid #c6d9ca;padding:16px 0 0}}
 
 .guidance-more{display:flex;margin:17px auto 3px!important;min-width:min(100%,230px);justify-content:center}
+
+
+/* Recording summary: text stays inside the evidence panel at any viewport width. */
+.confirmed-recordings{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.confirmed-recordings-list{list-style:none;padding:0;margin:0;display:grid;gap:10px;min-width:0}
+.confirmed-recording{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 18px;min-width:0;max-width:100%;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.confirmed-recording-details{min-width:0;display:grid;gap:5px}
+.confirmed-recording-name{min-width:0;font-size:15px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
+.confirmed-recording-meta{min-width:0;color:#426358;font-size:14px;line-height:1.5}
+.confirmed-recording>.danger-button{margin:0;white-space:nowrap;justify-self:end}
+@media(max-width:560px){
+ .confirmed-recording{grid-template-columns:minmax(0,1fr);gap:12px;padding:13px}
+ .confirmed-recording>.danger-button{justify-self:start}
+}

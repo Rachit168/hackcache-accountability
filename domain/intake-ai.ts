@@ -26,7 +26,7 @@ export function canonicalizeReportWhitespace(value:unknown,sources:Source[]):AIR
    const trimmed=c.quote.trim();
    // Escape every regex metacharacter before relaxing runs of whitespace only.
    if(!trimmed||!/\s/.test(trimmed))return c;
-   const pattern=trimmed.split(/\s+/).map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,'\\export function preparedReport(sources:Source[]):AIReport{')).join('\\s+');
+   const pattern=trimmed.split(/\s+/).map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,(ch)=>'\\'+ch)).join('\\s+');
    const re=new RegExp(pattern,'g');
    const found=[...original.matchAll(re)];
    if(found.length!==1)return c;

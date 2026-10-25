@@ -98,7 +98,7 @@ function App() {
   return <>
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>
     <header className="site-header">
-      <Link className="brand" to="/" aria-label={t("brandHome")}><span className="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H10l-5 4v-14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10.5h8M8 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span><span>Janvaani</span></Link>
+      <Link className="brand" to="/" aria-label={t("brandHome")} onClick={event=>{const form=document.querySelector('form[data-wizard-step][data-unsaved="true"]');if(form&&!window.confirm(language==='hi'?'शिकायत का अधूरा विवरण अभी सहेजा नहीं गया है। होम पेज पर जाने से वह खो जाएगा। क्या आप जाना चाहते हैं?':'Your unfinished complaint is not saved yet. Returning home will discard these entries. Continue?'))event.preventDefault();}}><span className="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H10l-5 4v-14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10.5h8M8 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span><span>Janvaani</span></Link>
       <div className="header-tools"><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
     </header>
     <main>
@@ -214,7 +214,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
       <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
       <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
     </aside>
-    <form onSubmit={submit} className="form-surface" data-wizard-step={step} noValidate><div className="wizard-stage-heading"><p>{language==='hi'?`चरण ${step+1} / 4`:`Step ${step+1} of 4`}</p><h2>{stepNames[step]}</h2><span>{language==='hi'?'आपकी जानकारी भेजने तक सहेजी नहीं जाएगी।':'Your entries are not saved until submission.'}</span></div>
+    <form onSubmit={submit} className="form-surface" data-wizard-step={step} data-unsaved={shouldWarn?'true':'false'} noValidate><div className="wizard-stage-heading"><p>{language==='hi'?`चरण ${step+1} / 4`:`Step ${step+1} of 4`}</p><h2>{stepNames[step]}</h2><span>{language==='hi'?'आपकी जानकारी भेजने तक सहेजी नहीं जाएगी।':'Your entries are not saved until submission.'}</span></div>
       {error === 'reviewFields' && summaryItems.length > 0 && <section ref={summaryRef} className="error-summary" role="alert" aria-labelledby="error-summary-title" tabIndex={-1}>
         <h2 id="error-summary-title">{t('reviewFields')}</h2><ul>{summaryItems.map((item) => <li key={item.field}><a href={`#${item.targetId}`} onClick={(event) => { event.preventDefault(); const control = document.getElementById(item.targetId); control?.focus(); control?.scrollIntoView({ behavior: 'auto', block: 'center' }); }}>{item.labelKey === 'concern' ? `${t(item.labelKey)} ${item.concernNumber}` : t(item.labelKey)}: {t(item.error)}</a></li>)}</ul>
       </section>}

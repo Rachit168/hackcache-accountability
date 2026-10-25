@@ -13,7 +13,8 @@ describe('UX structural regressions (source checks, not browser proof)',()=>{
   expect(welcome).not.toContain('setLanguage(');
  });
  it('keeps staff-only access reachable but out of the citizen header',()=>{
-  expect(main).toContain('<Link to="/staff">{language');
+  expect(main).not.toContain('<Link to="/staff">');
+  expect(main).toContain('<Link className="brand" to="/"');
   expect(main).not.toContain('<Link to="/staff">{language===\'hi\'?\'कार्यालय डेमो\'');
   expect(main).toContain('<Route path="/staff" element={<StaffPortal');
  });

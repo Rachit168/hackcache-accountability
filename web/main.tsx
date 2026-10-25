@@ -15,7 +15,7 @@ import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
 import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assistant';
 import {EscalationTimeline} from './escalation';
-import {safeFilename,fileSize} from '../domain/intake-ai';
+import {safeFilename} from '../domain/intake-ai';
 import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
 import {operatorApiFor} from './operator-api';
 import {StaffPortal} from './staff-portal';

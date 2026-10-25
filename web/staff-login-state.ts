@@ -35,7 +35,7 @@ export async function verifyStaffSession(
   const status=(error as {status?:unknown})?.status;
   if(status===401||status===403){
    try{await auth.signOut();}catch{/* Deny UI regardless. */}
-   return {status:'not-provisioned'};
+   return {status:status===401?'session-missing':'not-provisioned'};
   }
   return {status:'service-unavailable'};
  }
@@ -47,9 +47,16 @@ export async function signInStaff(
  if(!email.trim()||!password)return {status:'invalid-credentials'};
  try{
   const {data,error}=await auth.signInWithPassword({email:email.trim(),password});
-  if(error||!data.session)return {status:'invalid-credentials'};
+  if(error)return {status:authServiceUnavailable(error)?'service-unavailable':'invalid-credentials'};
+  if(!data.session)return {status:'invalid-credentials'};
  }catch{
-  return {status:'invalid-credentials'};
+  return {status:'service-unavailable'};
  }
  return verifyStaffSession(auth,readScopedQueue);
+}
+
+function authServiceUnavailable(error:unknown):boolean{
+ const status=(error as {status?:number})?.status;
+ const name=(error as {name?:string})?.name;
+ return name==='AuthRetryableFetchError'||status===429||typeof status==='number'&&status>=500;
 }

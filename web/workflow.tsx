@@ -8,6 +8,7 @@ import {EscalationTimeline} from './escalation';
 import {Disputes} from './disputes';
 import {ResolutionAudit} from './resolution-audit';
 import {Guidance} from './guidance';
+import {guidanceSituation} from './guidance-state';
 import {CasePackage} from './case-package';
 import {workflowLoadMessage} from './workflow-load';
 import { commandFailure, isCompletedCommand, newCommandKey, workflowScope, workflowSnapshot, writeConfirmed, type PendingWorkflowCommand, type WorkflowAction } from './workflow-state';
@@ -45,7 +46,7 @@ export function WorkflowWorkspace({api,language,caseId,panel}:{api:Api;language:
  {id&&<>
  {!panel&&view.kind!=='office'&&<Disputes key={id} id={id} api={api} language={language}/>}
  {view.kind!=='office'&&(!panel||panel==='audit')&&<ResolutionAudit key={'audit-'+id} id={id} api={api} language={language}/>}
- {view.kind!=='office'&&(!panel||panel==='next')&&<Guidance language={language}/>}
+ {view.kind!=='office'&&(!panel||panel==='next')&&<Guidance language={language} situation={guidanceSituation(view.history??[])}/>}
  {view.kind==='citizen'&&(!panel||panel==='next')&&<CasePackage key={'package-'+id} id={id} api={api} language={language}/>}
  {view.kind==='reviewer'&&!panel&&<><RecordVerification id={id} api={api} language={language}/><IntakeProvenance id={id} api={api} language={language}/><EscalationTimeline key={id} id={id} api={api} language={language}/></>}
  {view.kind==='reviewer'&&!panel&&<><h3>{t.originalHeading}</h3><p className="preserve">{view.narrative}</p><ol>{view.concerns?.map(c=><li key={c.id}><strong>{translate(language,c.type as 'service'|'conduct'|'mixed')}</strong><p className="preserve">{c.wording}</p><small className="workflow-id">{t.source}: {c.id}</small></li>)}</ol><button disabled={!!busy} onClick={()=>{const scope=workflowScope(id,'release');setDraft(scope,{narrative:view.narrative!,reason:'',concerns:view.concerns!.map(c=>({sourceId:c.id,type:c.type,wording:c.wording,reason:''}))});}}>{t.prepare}</button>

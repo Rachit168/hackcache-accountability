@@ -491,3 +491,7 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 .checkbox-option input[type=checkbox]{width:20px;height:20px;margin:3px 0 0;flex:0 0 20px;}
 .evidence-player audio{display:block;width:100%;max-width:480px;margin:12px 0;}
 @media(max-width:600px){.wizard-actions{padding:12px;gap:12px;}.wizard-progress button{width:100%;}.review-recap{padding:12px;}.saved-account fieldset{min-width:0;}}
+
+.form-surface[data-wizard-step="3"] .wizard-actions{position:static;box-shadow:none;}
+.next-step-checklist{padding:20px;background:#f0f5f1;border:1px solid var(--line);border-radius:9px;margin:22px 0;}.next-step-checklist li{margin:12px 0;line-height:1.7;}
+.recorded-milestones{list-style:none;padding-left:12px;margin:24px 0;}.recorded-milestones>li{border-left:3px solid #74a79b;padding:0 0 22px 22px;position:relative;}.recorded-milestones>li::before{content:'';position:absolute;left:-8px;top:3px;width:13px;height:13px;border-radius:50%;background:#1f655d;border:2px solid #fff;}.recorded-milestones>li>strong{font-size:17px;}

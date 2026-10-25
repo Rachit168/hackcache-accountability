@@ -1,0 +1,2 @@
+import {it,expect} from 'vitest';import {guidanceSituation} from '../web/guidance-state';
+it('derives next steps only from recorded substantive responses or acknowledgements',()=>{expect(guidanceSituation([])).toBe('awaiting');expect(guidanceSituation([{action:'release'}])).toBe('awaiting');expect(guidanceSituation([{action:'acknowledge'}])).toBe('acknowledged');expect(guidanceSituation([{action:'acknowledge'},{action:'response'}])).toBe('response');});

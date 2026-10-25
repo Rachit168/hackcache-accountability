@@ -703,3 +703,16 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
  .intake-provenance-disclosure>.report-draft{padding:15px 13px!important}
  .citizen-review-issues{padding-left:19px}
 }
+
+
+/* Staff roles are server-authorized, never inferred from login email. */
+.staff-role-summary{margin:18px 0;padding:23px 25px;border:1px solid #cfdfd4;background:#f3f8f3;border-radius:9px;min-width:0;overflow-wrap:anywhere}
+.staff-role-summary-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;min-width:0}
+.staff-role-summary-top>div{min-width:0}
+.staff-role-summary h2{font-size:clamp(21px,2.6vw,27px);margin:4px 0 9px;color:#194c3e;line-height:1.28}
+.staff-role-summary>.staff-role-summary-top .eyebrow{color:#4a6659}
+.staff-role-pill{flex:0 0 auto;border:1px solid #8cba9e;background:#fff;color:#1a6047;padding:7px 13px;font-size:13px;font-weight:800;border-radius:4px}
+.staff-role-summary>p{color:#416257;line-height:1.65;font-size:15px;margin:9px 0 0;max-width:790px}
+.staff-role-summary .staff-role-empty{margin-top:16px;padding:13px 17px;background:#fff;border-left:3px solid #bd915a;color:#594e39}
+.staff-portal .staff-auth-retry{margin:8px 0 17px}
+@media(max-width:620px){.staff-role-summary{padding:17px 16px}.staff-role-summary-top{flex-direction:column;gap:10px}.staff-role-pill{align-self:flex-start}}

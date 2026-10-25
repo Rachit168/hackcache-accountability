@@ -32,7 +32,7 @@ export function staffCaseJourney(view:StaffJourneyView,language:Language):StaffJ
   ];
   if(!released)return {role:'reviewer',steps,next:hi?'कार्यालय के लिए अलग संस्करण तैयार करें':'Prepare a separate office-facing version',explanation:hi?'मूल शिकायत और निजी साक्ष्य की जाँच करें। केवल मंज़ूर किया गया संस्करण कार्यालय को मिलेगा।':'Review the citizen’s original account and private evidence first. Only an approved version reaches the office.',action:hi?'समीक्षा शुरू करें':'Review and prepare',target:'actions'};
   if(!answered)return {role:'reviewer',steps,next:hi?'कार्यालय कार्रवाई का रिकॉर्ड देखें':'Watch for a recorded office action',explanation:hi?'कार्यालय को संस्करण जारी है। जवाब अभी इस संस्करण के लिए दर्ज नहीं है।':'The outgoing version is released. No reply is recorded against this version yet.',action:hi?'इतिहास देखें':'View history',target:'history'};
-  return {role:'reviewer',steps,next:hi?'जवाब की जाँच करें':'Check the recorded office reply',explanation:hi?'जवाब दर्ज है, लेकिन इससे समस्या हल होने की पुष्टि नहीं होती।':'A reply is recorded; this does not verify that the issue was resolved.',action:hi?'साक्ष्य और जवाब जाँचें':'Review evidence and reply',target:'evidence'};
+  return {role:'reviewer',steps,next:hi?'जवाब की जाँच करें':'Check the recorded office reply',explanation:hi?'जवाब दर्ज है, लेकिन इससे समस्या हल होने की पुष्टि नहीं होती।':'A reply is recorded; this does not verify that the issue was resolved.',action:hi?'दर्ज जवाब और इतिहास जाँचें':'Review recorded reply and history',target:'history'};
  }
  const steps:StaffJourneyStep[]=[
   {id:'released',label:hi?'कार्यालय को संस्करण मिला':'Released version received',done:released,current:!released},

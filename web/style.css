@@ -674,3 +674,32 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 .office-action-complete p{line-height:1.65;color:#395b4a;margin:0 0 15px}
 .office-action-complete button{margin:0}
 @media(max-width:560px){.office-action-complete{padding:14px}.report-draft .ai-missing-list{padding-left:20px}}
+
+
+/* Receipt provenance: human-readable original first; full AI quotes on demand. */
+.intake-provenance{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.intake-provenance>h3{margin:0 0 8px;font-size:21px;line-height:1.35}
+.intake-provenance>.field-help{margin:0 0 20px;max-width:720px;line-height:1.65}
+.intake-provenance-sections{display:grid;gap:13px;min-width:0}
+.intake-provenance-disclosure{min-width:0;margin:0;border:1px solid #d4e0d8;background:#fff;border-radius:9px;overflow:hidden}
+.intake-provenance-disclosure>summary{padding:17px 19px;line-height:1.5;color:#215b4a;font-size:16px;overflow-wrap:anywhere}
+.intake-provenance-disclosure[open]>summary{background:#f5f9f6}
+.intake-provenance-disclosure>.citizen-review-readable{margin:0;padding:18px 20px 20px;min-width:0}
+.citizen-review-readable h4{font-size:16px;margin:4px 0 10px;color:#26493e}
+.citizen-review-readable h4:not(:first-child){margin-top:23px;padding-top:17px;border-top:1px solid #e4eae6}
+.citizen-review-readable>.preserve{line-height:1.75;overflow-wrap:anywhere;margin:0;color:#233e36}
+.citizen-review-issues{margin:10px 0 15px;padding-left:24px;display:grid;gap:12px;min-width:0}
+.citizen-review-issues li{padding-left:3px;overflow-wrap:anywhere}
+.citizen-review-issues strong{display:block;color:#395f50;font-size:14px}
+.citizen-review-issues p{margin:5px 0 0;line-height:1.65}
+.intake-provenance-disclosure>.report-draft{margin:0!important;border:0;border-radius:0;background:#fff;padding:19px!important}
+.intake-provenance-disclosure .report-field blockquote{min-width:0;margin:10px 0 0;overflow-wrap:anywhere}
+.verification-limits{margin:12px 0 0}
+.verification-limits>summary{font-size:14px;padding:11px 15px}
+.verification-limits>p{font-size:14px;line-height:1.65}
+@media(max-width:560px){
+ .intake-provenance-disclosure>summary{padding:14px 13px;font-size:15px}
+ .intake-provenance-disclosure>.citizen-review-readable{padding:15px 13px}
+ .intake-provenance-disclosure>.report-draft{padding:15px 13px!important}
+ .citizen-review-issues{padding-left:19px}
+}

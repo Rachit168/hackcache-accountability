@@ -1,7 +1,7 @@
 import {describe,expect,it,vi} from 'vitest';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {staffCaseJourney} from '../web/staff-case-progress';
+import {staffCaseJourney,displayedWorkflowVersions} from '../web/staff-case-progress';
 import {StaffCaseJourney} from '../web/staff-case-journey';
 
 const released={id:'version-1'};
@@ -40,6 +40,15 @@ describe('staff case action journey (data-backed and role scoped)',()=>{
   expect(staffCaseJourney({kind:'citizen',versions:[released],history:[ack,answer]},'en')).toBeNull();
   const html=renderToStaticMarkup(<StaffCaseJourney view={{kind:'citizen'}} language="en" onNavigate={vi.fn()}/>);
   expect(html).toBe('');
+ });
+ it('limits office UI to one authorized version at a time while other roles retain their history',()=>{
+  const versions=[{id:'a'},{id:'b'},{id:'c'}];
+  expect(displayedWorkflowVersions('office',versions,'latest')).toEqual([{id:'c'}]);
+  expect(displayedWorkflowVersions('office',versions,'a')).toEqual([{id:'a'}]);
+  expect(displayedWorkflowVersions('office',versions,'not-in-server-response')).toEqual([]);
+  expect(displayedWorkflowVersions('reviewer',versions,'latest')).toEqual(versions);
+  expect(displayedWorkflowVersions('citizen',versions,'latest')).toEqual(versions);
+  expect(displayedWorkflowVersions('office',undefined,'latest')).toEqual([]);
  });
  it('has native next-action button, accessible milestone list and Hindi copy',()=>{
   const html=renderToStaticMarkup(<StaffCaseJourney view={{kind:'office',versions:[released],history:[ack]}} language="hi" onNavigate={vi.fn()}/>);

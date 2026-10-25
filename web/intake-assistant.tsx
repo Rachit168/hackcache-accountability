@@ -3,6 +3,7 @@ import {type AIReport,type Source} from '../domain/intake-ai';
 import type {Language} from './i18n';
 import {intakeError,flagExplanation} from './intake-copy';
 import type {EvidenceSummary} from './evidence-summary';
+import {supportedAudioRecording} from './intake-audio';
 type Api=<T>(path:string,init?:RequestInit)=>Promise<T>;
 export type IntakeDraft={id:string;body:{sources:Source[];report:AIReport;provenance:{mode:string;provider:string}}};
 export function IntakeAssistant({api,language,text,evidenceIds,disabled,onReadinessChange,onSource,onApply}:{api:Api;language:Language;text:string;evidenceIds:string[];disabled:boolean;onReadinessChange?:(ready:boolean)=>void;onSource:(id:string,file?:EvidenceSummary)=>void;onApply:(draft:IntakeDraft)=>void}){
@@ -11,15 +12,10 @@ export function IntakeAssistant({api,language,text,evidenceIds,disabled,onReadin
  useEffect(()=>()=>{generation.current++;if(recorder.current?.state!=='inactive')recorder.current?.stop();stream.current?.getTracks().forEach(t=>t.stop());},[]);
  useEffect(()=>{if(!file){setUrl('');return;}const u=URL.createObjectURL(file);setUrl(u);return()=>URL.revokeObjectURL(u);},[file]);
  const uploadKey=useRef<{file:File;key:string}|undefined>(undefined);
- const audioExtensions=/\.(wav|mp3|ogg|webm)$/i;
- // The native file picker is advisory only: browsers can still return an arbitrary file.
- // Reject non-audio files before they are labelled as recordings or sent to Storage.
+ // Browser file picker filters are advisory: validate selected files before upload.
  function chooseAudio(next:File){
-  if(!audioExtensions.test(next.name)||!next.size||next.size>8*1024*1024){
-   setFile(undefined);setError(hi?'यहाँ केवल WAV, MP3, Ogg या WebM ऑडियो दें (अधिकतम 8 MiB)। TXT, PDF और MP4 के लिए ऊपर निजी साक्ष्य चुनें।':'Choose a WAV, MP3, Ogg or WebM recording up to 8 MiB. Put TXT, PDF or MP4 in Private evidence instead.');return;
-  }
-  if(next.type&&!['audio/wav','audio/x-wav','audio/wave','audio/mpeg','audio/mp3','audio/ogg','application/ogg','audio/webm','video/webm','application/octet-stream'].includes(next.type)){
-   setFile(undefined);setError(hi?'चुनी गई फ़ाइल ऑडियो रिकॉर्डिंग नहीं लगती।':'The selected file does not appear to be an audio recording.');return;
+  if(!supportedAudioRecording(next)){
+   setFile(undefined);setError(hi?'यहाँ केवल WAV, MP3, Ogg या WebM ऑडियो दें (अधिकतम 8 MiB)। TXT, PDF और MP4 के लिए ऊपर निजी साक्ष्य चुनें।':'Choose WAV, MP3, Ogg or WebM audio up to 8 MiB. Put TXT, PDF or MP4 in Private evidence instead.');return;
   }
   uploadKey.current=undefined;setFile(next);setError('');
  }

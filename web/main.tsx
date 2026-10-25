@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { complaintSchema, type CaseRecord } from '../domain/complaint';
 import { initialLanguage, translate, type CopyKey, type Language } from './i18n';
@@ -9,12 +9,22 @@ import { createReceiptRecovery } from './receipt-recovery';
 import { attachLeaveWarning, copyExactReference, fieldErrorSummary, shouldWarnOnLeave } from './form-usability';
 import type { FormError } from './form-types';
 import './style.css';
-import { StaffSession, WorkflowWorkspace } from './workflow';
+import {Welcome,FindCase} from './welcome';
+import { WorkflowWorkspace } from './workflow';
 import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
 import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assistant';
 import {EscalationTimeline} from './escalation';
 import {safeFilename} from '../domain/intake-ai';
+import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
+import {operatorApiFor} from './operator-api';
+import {StaffPortal} from './staff-portal';
+import {staffAccessAllowed} from './staff-access';
+import {authenticatedFetch} from './api-transport';
+import {visitWizard,continueWizard} from './wizard-state';
+import type {EvidenceSummary} from './evidence-summary';
+import {ConfirmedRecordings} from './confirmed-recordings';
+import {AssistantAttachmentStatus} from './assistant-attachment-status';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -25,15 +35,12 @@ const hotData = import.meta.hot?.data as HotData | undefined;
 let auth = hotData?.auth;
 
 async function api<T = { error?: string }>(path: string, init: RequestInit = {}): Promise<T> {
-  const session = await auth?.auth.getSession();
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, {
-      ...init,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.data.session?.access_token ?? ''}`, ...init.headers },
-    });
+    response = await authenticatedFetch(path,init,async()=>(await auth?.auth.getSession())?.data.session?.access_token);
   } catch { throw new ApiError(0, 'network'); }
   if(response.ok&&response.headers.get('Content-Disposition')?.startsWith('attachment')){const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;const encoded=response.headers.get('Content-Disposition')?.split("filename*=UTF-8''")[1];link.download=safeFilename(encoded?decodeURIComponent(encoded):'evidence');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return undefined as T;}
+  if(response.ok&&response.headers.get('Content-Type')?.startsWith('audio/'))return await response.blob() as T;
   const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new ApiError(response.status, body.error ?? 'request');
   return body;
@@ -44,6 +51,8 @@ function App() {
   const t = useMemo(() => (key: CopyKey, values?: Record<string, string | number>) => translate(language, key, values), [language]);
   const [config, setConfig] = useState<Config>();
   const [signedIn, setSignedIn] = useState(false);
+  const [operatorClient,setOperatorClient] = useState<SupabaseClient>();
+  const [operatorSignedIn,setOperatorSignedIn] = useState(false);
   const [error, setError] = useState<CopyKey>();
   const [busy, setBusy] = useState(false);
   const [configRetry, setConfigRetry] = useState(0);
@@ -65,7 +74,15 @@ function App() {
         if (!active) return;
         setConfig(value);
         if (value.ready && value.url && value.publishableKey) {
-          auth ??= createClient(value.url, value.publishableKey,{auth:{storageKey:window.location.pathname.startsWith('/staff')?'janvaani-operator-session':'sb-'+new URL(value.url).hostname.split('.')[0]+'-auth-token'}});
+          auth ??= createClient(value.url, value.publishableKey,{auth:{storageKey:'sb-'+new URL(value.url).hostname.split('.')[0]+'-auth-token'}});
+          // Operator auth is isolated from the citizen's browser identity, even during SPA navigation.
+          const operator=createClient(value.url,value.publishableKey,{auth:{storageKey:'janvaani-operator-session'}});
+          setOperatorClient(operator);
+          const officeSession=await operator.auth.getSession();
+          // A cached identity is not authorization. On reload, fail closed until the
+          // server confirms a staff role through the same scoped request as login.
+          const allowed=await staffAccessAllowed(!!officeSession.data.session,()=>operatorApiFor(operator,api)<{kind:string}>('/workflow'));
+          if(active)setOperatorSignedIn(allowed);
           if (hotData) hotData.auth = auth;
           const { data } = await auth.auth.getSession();
           if (active) setSignedIn(!!data.session);
@@ -82,15 +99,18 @@ function App() {
     finally { setBusy(false); }
   }
 
+  const operatorApi=useMemo(()=>operatorApiFor(operatorClient,api),[operatorClient]);
+
   return <>
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>
     <header className="site-header">
-      <Link to="/" className="brand" aria-label={t('brandHome')}><span className="brand-mark" aria-hidden="true">ज</span><span>Janvaani</span></Link>
-      <div className="header-tools"><nav aria-label={t('workspace')}><Link to="/">{t('workspace')}</Link><a href="#privacy">{t('privacy')}</a></nav><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
+      <Link className="brand" to="/" aria-label={t("brandHome")} onClick={event=>{const form=document.querySelector('form[data-wizard-step][data-unsaved="true"]');if(form&&!window.confirm(language==='hi'?'शिकायत का अधूरा विवरण अभी सहेजा नहीं गया है। होम पेज पर जाने से वह खो जाएगा। क्या आप जाना चाहते हैं?':'Your unfinished complaint is not saved yet. Returning home will discard these entries. Continue?'))event.preventDefault();}}><span className="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H10l-5 4v-14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10.5h8M8 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span><span>Janvaani</span></Link>
+      <div className="header-tools"><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
     </header>
     <main>
       <Routes>
-        <Route path="/" element={<>
+        <Route path="/" element={<Welcome language={language} setLanguage={setLanguage} signedIn={signedIn} ready={!!config?.ready} onStart={()=>void signIn()} busy={busy}/>} />
+        <Route path="/file" element={<>
           <div className="page-heading"><p className="sample-label">{t('desk')}</p><h1>{t('fileTitle')}</h1><p>{t('fileIntro')}</p></div>
           {!config ? error ? <section className="notice" role="alert"><h2>{t('unavailable')}</h2><p>{t(error)}</p><button type="button" onClick={retryConfig}>{t('retry')}</button></section> : <p className="live-message" role="status">{t('connecting')}</p>
             : !config.ready ? <section className="notice" role="status" aria-labelledby="setup-title"><h2 id="setup-title">{t('setupTitle')}</h2><p>{t('setupBody')}</p><button type="button" onClick={retryConfig}>{t('retry')}</button></section>
@@ -99,9 +119,10 @@ function App() {
           {error && config && <p className="error" role="alert">{t(error)}</p>}
           <ComplaintForm enabled={signedIn && !!config?.ready} language={language} t={t} />
         </>} />
+        <Route path="/cases" element={<FindCase language={language}/>} />
         <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
-        <Route path="/staff" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
-        <Route path="/staff/:id" element={<><StaffSession client={auth} onReady={()=>window.location.reload()} language={language}/>{signedIn&&<WorkflowWorkspace api={api} language={language}/>}</>} />
+        <Route path="/staff" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} onSignedOut={()=>setOperatorSignedIn(false)} api={operatorApi} language={language}/>} />
+        <Route path="/staff/:id" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} onSignedOut={()=>setOperatorSignedIn(false)} api={operatorApi} language={language}/>} />
         <Route path="*" element={<section className="notice"><h1>{t('pageNotFound')}</h1><Link to="/">{t('returnWorkspace')}</Link></section>} />
       </Routes>
       <section id="privacy" className="privacy" aria-labelledby="privacy-title"><h2 id="privacy-title">{t('usingDemo')}</h2><p>{t('privacyBody')}</p></section>
@@ -117,9 +138,10 @@ function LanguageToggle({ language, setLanguage, t }: { language: Language; setL
 
 function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: Language; t: Translator }) {
   const navigate = useNavigate();
+  const [progress,setProgress]=useState({current:0,furthest:0});const step=progress.current;const setStep=(next:number|((step:number)=>number))=>setProgress(p=>visitWizard(p,typeof next==='function'?next(p.current):next));
   const [narrative, setNarrative] = useState('');
   const [concerns, setConcerns] = useState<Concern[]>(() => [
-    { uiId: crypto.randomUUID(), type: 'service', wording: '' }, { uiId: crypto.randomUUID(), type: 'conduct', wording: '' },
+    { uiId: crypto.randomUUID(), type: 'service', wording: '' },
   ]);
   const [declaration, setDeclaration] = useState(false);
   const [error, setError] = useState<CopyKey>();
@@ -128,7 +150,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [attempt, setAttempt] = useState(false);
   const [evidenceIds,setEvidenceIds]=useState<string[]>([]);
-  const [evidenceReady,setEvidenceReady]=useState(true);
+  const [evidenceReady,setEvidenceReady]=useState(true);const [assistantReady,setAssistantReady]=useState(true);const [evidenceFiles,setEvidenceFiles]=useState<EvidenceSummary[]>([]);const [assistantFiles,setAssistantFiles]=useState<EvidenceSummary[]>([]);
   const [assistantIds,setAssistantIds]=useState<string[]>([]);
   const [intakeDraft,setIntakeDraft]=useState<string>();
   const reviewKey=useRef(crypto.randomUUID());
@@ -158,8 +180,10 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
     setConcerns((items) => items.map((item) => item.uiId === uiId ? { ...item, ...update } : item));
   }
   async function submit(event: React.FormEvent) {
-    event.preventDefault(); setError(undefined);
-    if(!evidenceReady)return;
+    event.preventDefault();
+    if(step!==3){nextStep();return;}
+    setError(undefined);
+    if(!evidenceReady||!assistantReady)return;
     const parsed = complaintSchema.safeParse(payload);
     if (!parsed.success) {
       const next: Record<string, FormError> = {};
@@ -171,7 +195,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         }
         if (issue.path[0] === 'declaration') next.declaration = 'declarationError';
       }
-      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); return;
+      setFieldErrors(next); setError('reviewFields'); setSummaryFocus((value) => value + 1); setStep(next.narrative?0:concerns.some(c=>next[c.uiId])?1:3); return;
     }
     setFieldErrors({}); setBusy(true); setAttempt(true);
     try {
@@ -179,21 +203,28 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
       const receipt = await api<{ id: string }>('/complaints', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({...parsed.data,...(review?{intakeReviewId:review.id}:{})}) });
       submitted.current = true;
       navigate(`/cases/${receipt.id}`);
-    } catch { setError('submitError'); }
+    } catch (caught) { setError('submitError'); if(caught instanceof ApiError && [400,403,409,413,422].includes(caught.status)){setAttempt(false);setKey(crypto.randomUUID());} }
     finally { setBusy(false); }
   }
 
-  return <div className="form-layout">
+  function nextStep(){
+    if(step===0&&!narrative.trim()){setFieldErrors(v=>({...v,narrative:'narrativeError'}));document.getElementById('narrative')?.focus();return;}
+    if(step===1){const missing=concerns.filter(c=>!c.wording.trim());if(missing.length){setFieldErrors(v=>({...v,...Object.fromEntries(missing.map(c=>[c.uiId,'concernError' as const]))}));document.getElementById(missing[0].uiId+'-wording')?.focus();return;}}
+    if(step===2&&(!evidenceReady||!assistantReady))return;
+    setProgress(p=>continueWizard(p,true));window.scrollTo({top:0,behavior:'instant'});
+  }
+  const stepNames=language==='hi'?['घटना का विवरण','मुख्य मुद्दे','साक्ष्य और AI','समीक्षा व भेजें']:['Your story','Issues to address','Evidence & assistance','Review & submit'];
+  return <div className="form-layout wizard-layout">
     <aside className="help-column" aria-label={t('sideNav')}>
-      <nav className="section-nav" aria-label={t('sideNav')}><a href="#story-title">{t('sectionStory')}</a><a href="#concerns-title">{t('sectionIssues')} <span className="count-pill">{concerns.length}</span></a><a href="#review-title">{t('sectionReview')}</a></nav>
+      <nav className="wizard-progress" aria-label={language==='hi'?'शिकायत के चरण':'Complaint steps'}><ol>{stepNames.map((name,i)=><li key={name} aria-current={step===i?'step':undefined}><button type="button" disabled={busy||attempt||i>progress.furthest} className={i===step?'current':i<=progress.furthest?'complete':''} onClick={()=>setStep(i)}><span className="step-number">{i+1}</span><span>{name}</span></button></li>)}</ol></nav>
       <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
       <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
     </aside>
-    <form onSubmit={submit} className="form-surface" noValidate>
+    <form onSubmit={submit} className="form-surface" data-wizard-step={step} data-unsaved={shouldWarn?'true':'false'} noValidate><div className="wizard-stage-heading"><p>{language==='hi'?`चरण ${step+1} / 4`:`Step ${step+1} of 4`}</p><h2>{stepNames[step]}</h2><span>{language==='hi'?'आपकी जानकारी भेजने तक सहेजी नहीं जाएगी।':'Your entries are not saved until submission.'}</span></div>
       {error === 'reviewFields' && summaryItems.length > 0 && <section ref={summaryRef} className="error-summary" role="alert" aria-labelledby="error-summary-title" tabIndex={-1}>
         <h2 id="error-summary-title">{t('reviewFields')}</h2><ul>{summaryItems.map((item) => <li key={item.field}><a href={`#${item.targetId}`} onClick={(event) => { event.preventDefault(); const control = document.getElementById(item.targetId); control?.focus(); control?.scrollIntoView({ behavior: 'auto', block: 'center' }); }}>{item.labelKey === 'concern' ? `${t(item.labelKey)} ${item.concernNumber}` : t(item.labelKey)}: {t(item.error)}</a></li>)}</ul>
       </section>}
-      <section className="form-section" aria-labelledby="story-title">
+      <section className="form-section" data-wizard-stage="0" aria-labelledby="story-title">
         <h2 id="story-title">{t('storyTitle')}</h2><p className="section-intro">{t('storyIntro')}</p>
         <label className="field-label" htmlFor="narrative">{t('account')}</label>
         <textarea id="narrative" aria-describedby={`narrative-help${fieldErrors.narrative ? ' narrative-error' : ''}`} aria-invalid={!!fieldErrors.narrative} maxLength={12000} rows={6} value={narrative} onChange={(event) => { changed('narrative'); setNarrative(event.target.value); }} placeholder={t('narrativePlaceholder')} disabled={busy||attempt} />
@@ -201,42 +232,55 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         {fieldErrors.narrative && <p className="field-error" id="narrative-error">{t(fieldErrors.narrative)}</p>}
         <p className="counter" aria-live="polite">{narrative.length.toLocaleString(locale)} / 12,000 {t('characters')}</p>
       </section>
-      <section className="form-section" aria-labelledby="concerns-title">
-        <h2 id="concerns-title">{t('issuesTitle')}</h2><p className="section-intro">{t('issuesIntro')}</p>
+      <section className="form-section" data-wizard-stage="1" aria-labelledby="concerns-title">
+        <h2 id="concerns-title">{language==='hi'?'आप किन सवालों का जवाब चाहते हैं?':'What do you want answered?'}</h2><p className="section-intro">{t('issuesIntro')}</p>
         {concerns.map((concern, index) => {
           const field = concern.uiId; const errorId = `${field}-error`; const wordingId = `${field}-wording`;
           return <fieldset className="concern" key={field}>
-            <legend className="concern-legend"><span>{t('concern')} {index + 1}</span><label className="type-control"><span className="sr-only">{t('concernType', { n: index + 1 })}</span><select aria-label={t('concernType', { n: index + 1 })} value={concern.type} disabled={busy||attempt} onChange={(event) => { changed(); updateConcern(field, { type: event.target.value as ConcernType }); }}>
-              <option value="service">{t('service')}</option><option value="conduct">{t('conduct')}</option><option value="mixed">{t('mixed')}</option>
-            </select></label></legend>
+            <legend className="concern-legend"><span>{language==='hi'?'मुद्दा':'Issue'} {index+1}</span></legend>
+            <div className="issue-type"><p className="field-label" id={field+'-type'}>{language==='hi'?'इस मुद्दे के बारे में बताएँ':'What is this about?'}</p>
+             <div className="choice-row" role="radiogroup" aria-labelledby={field+'-type'}>{([
+              ['service',language==='hi'?'सेवा या देरी':'Service or delay'],
+              ['conduct',language==='hi'?'व्यवहार':'Staff behaviour'],
+              ['mixed',language==='hi'?'दोनों':'Both']
+             ] as [ConcernType,string][]).map(([kind,label])=><label className="choice-pill" key={kind}>
+              <input type="radio" name={'type-'+field} value={kind} checked={concern.type===kind} disabled={busy||attempt} onChange={()=>{changed();updateConcern(field,{type:kind});}}/><span>{label}</span>
+             </label>)}</div>
+            </div>
             <p className="field-help type-help">{t(`${concern.type}Help` as CopyKey)}</p>
-            <label className="sr-only" htmlFor={wordingId}>{t('concern')} {index + 1}: {t('account')}</label>
+            <label className="field-label" htmlFor={wordingId}>{language==='hi'?'इस मुद्दे को अपने शब्दों में लिखें':'Describe this issue in your own words'}</label>
             <textarea id={wordingId} aria-describedby={fieldErrors[field] ? errorId : undefined} aria-invalid={!!fieldErrors[field]} rows={3} maxLength={2000} value={concern.wording} disabled={busy||attempt} onChange={(event) => { changed(field); updateConcern(field, { wording: event.target.value }); }} placeholder={t('wordingPlaceholder')} />
             {fieldErrors[field] && <p className="field-error" id={errorId}>{t(fieldErrors[field])}</p>}
-            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="text-button" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}>{t('removeConcern')} {index + 1}</button>}</div>
+            <div className="concern-actions">{concerns.length > 1 && <button type="button" className="remove-concern" disabled={busy||attempt} onClick={() => { changed(field); setFieldErrors((current) => { const next = { ...current }; delete next[field]; return next; }); setConcerns((items) => items.filter((item) => item.uiId !== field)); }}><span aria-hidden="true">×</span> {t('removeConcern')} {index + 1}</button>}</div>
           </fieldset>;
         })}
-        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}>{t('addConcern')}</button>
+        <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}><span aria-hidden="true">＋</span> {t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
-      <EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
-      <IntakeAssistant api={api} language={language} text={narrative} evidenceIds={allEvidenceIds} disabled={!enabled||busy||attempt||!evidenceReady} onSource={id=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();setNarrative(draft.body.report.allegation.value);setConcerns(draft.body.report.concerns.map(c=>({uiId:crypto.randomUUID(),type:c.type,wording:c.field.value})));setDeclaration(false);}}/>
-      {intakeDraft&&<p role="status">{language==='hi'?'AI संस्करण चुना गया है। अपने सुधार करें और भेजने से पहले घोषणा की पुष्टि करें।':'AI revision selected. Make your corrections and confirm the declaration before submission. Citizen additions and edits carry no invented AI citations.'}</p>}
-      {!evidenceReady&&<p role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
-      <section className="form-section submit-section" aria-labelledby="review-title">
+      <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready,files)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);setEvidenceFiles(files);}}/>
+      <IntakeAssistant api={api} language={language} text={narrative} concerns={concerns.map(({type,wording})=>({type,wording}))} evidenceIds={allEvidenceIds} sourceFiles={[...evidenceFiles,...assistantFiles]} disabled={!enabled||busy||attempt||!evidenceReady} onReadinessChange={setAssistantReady} onSource={(id,file)=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);if(file)setAssistantFiles(old=>[...old.filter(f=>f.id!==id),file]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();/* AI interpretation is supplementary. Never replace citizen-authored account or issues. */setDeclaration(false);}}/>
+      <ConfirmedRecordings files={assistantFiles} language={language} disabled={busy||attempt} onRemove={id=>{changed();setAssistantIds(ids=>ids.filter(value=>value!==id));setAssistantFiles(files=>files.filter(file=>file.id!==id));}}/>
+      {intakeDraft&&<AssistantAttachmentStatus language={language}/>}
+      {!evidenceReady&&<p className="wizard-evidence-notice" role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
+      </div><section className="form-section submit-section" data-wizard-stage="3" aria-labelledby="review-title"><div className="review-recap"><h3>{language==='hi'?'भेजने से पहले जाँचें':'Check before submitting'}</h3><section><h4>{language==='hi'?'आपका विवरण':'Your account'}</h4><p className="preserve">{narrative}</p><button type="button" className="secondary-button" onClick={()=>setStep(0)}>{language==='hi'?'विवरण संपादित करें':'Edit account'}</button></section><section><h4>{language==='hi'?'जवाब चाहने वाले मुद्दे':'Issues requiring answers'}</h4><ol>{concerns.map(c=><li key={c.uiId} className="preserve">{c.wording}</li>)}</ol><button type="button" className="secondary-button" onClick={()=>setStep(1)}>{language==='hi'?'मुद्दे संपादित करें':'Edit issues'}</button></section><section><h4>{language==='hi'?'पुष्ट निजी फ़ाइलें और रिकॉर्डिंग':'Confirmed private evidence and recordings'}</h4>{!allEvidenceIds.length?<p>{language==='hi'?'कोई फ़ाइल संलग्न नहीं है। केवल लिखित शिकायत भेज सकते हैं।':'No files attached. Written-only submission is supported.'}</p>:<ul>{[...evidenceFiles,...assistantFiles].filter(f=>allEvidenceIds.includes(f.id)).map(f=><li key={f.id}>{f.name} · {f.bytes} B · {language==='hi'?'अपलोड की पुष्टि हुई':'Upload confirmed'}</li>)}</ul>}<button type="button" className="secondary-button" onClick={()=>setStep(2)}>{language==='hi'?'फ़ाइलें और सहायता देखें':'Edit evidence or assistance'}</button></section><section><h4>{language==='hi'?'वैकल्पिक सहायता':'Optional assistance'}</h4><p>{intakeDraft?(language==='hi'?'AI सुझाव समीक्षा के लिए जोड़े गए हैं। आपकी लिखी कहानी और सवाल नहीं बदले। मूल स्रोत और AI व्याख्या अलग सुरक्षित रहती है।':'You attached AI suggestions for review. Your own story and questions above were not replaced. The original sources and separate AI interpretation are retained; this is not a verified finding.'):(language==='hi'?'कोई सहायता वाला मसौदा लागू नहीं किया गया। यह आपका लिखा विवरण है।':'No assisted draft has been applied. This is your authored account.')}</p></section></div>
         <h2 id="review-title">{t('reviewTitle')}</h2>
         <label className="declaration" htmlFor="declaration"><input id="declaration" type="checkbox" checked={declaration} disabled={busy||attempt} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} /><span>{t('declaration')}</span></label>
         {fieldErrors.declaration && <p className="field-error" id="declaration-error">{t(fieldErrors.declaration)}</p>}
         {error && <p role="alert" className="error">{t(error)}</p>}
-        <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
+        <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady || !assistantReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
         {!enabled && <p className="field-help">{t('startSessionToSubmit')}</p>}<p className="field-help">{t('privateReceipt')}</p>
-      </section>
+      </section><nav className="wizard-actions" aria-label={language==='hi'?'चरण नेविगेशन':'Step navigation'}>{step>0&&<button type="button" className="secondary-button" disabled={busy||attempt} onClick={()=>{setStep(v=>Math.max(0,v-1));window.scrollTo({top:0,behavior:'instant'});}}>{language==='hi'?'पिछला':'Back'}</button>}{step<3&&<button type="button" disabled={busy||attempt||step===2&&(!evidenceReady||!assistantReady)} onClick={nextStep}>{language==='hi'?'आगे बढ़ें':'Continue'} <span aria-hidden="true">→</span></button>}</nav>
     </form>
   </div>;
 }
 
 function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: boolean; language: Language; t: Translator }) {
   const { id } = useParams();
+  const [caseParams,setCaseParams] = useSearchParams();
+  const [responseCheck,setResponseCheck]=useState<ResponseCheck>('checking');
+  const availablePanels=casePanels(responseCheck);
+  const activePanel=resolveCasePanel(caseParams.get('section'),responseCheck,caseParams.has('auditResponse'));
+  const switchPanel=(panel:CasePanel)=>{const params=new URLSearchParams(caseParams);params.set('section',panel);setCaseParams(params);window.scrollTo({top:0,behavior:'instant'});};
   const [record, setRecord] = useState<CaseRecord>();
   const [state, setState] = useState<'loading' | 'ready' | 'not-found' | 'unavailable' | 'auth-error'>('loading');
   const [loadedId, setLoadedId] = useState<string>();
@@ -269,6 +313,15 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     });
     return () => { active = false; };
   }, [id, ready, signedIn, retry]);
+  useEffect(()=>{
+    let active=true;
+    setResponseCheck('checking');
+    if(!ready||!signedIn||!id)return;
+    api<{responses:{id:string}[]}>('/audit/'+encodeURIComponent(id)).then(value=>{
+      if(active)setResponseCheck(value.responses?.length?'available':'missing');
+    }).catch(()=>{if(active)setResponseCheck('error');});
+    return ()=>{active=false;};
+  },[id,ready,signedIn,retry]);
   const visibleState = loadedId === id ? state : 'loading';
   if (!ready) return <section className="notice"><h1>{t('receiptAccess')}</h1><p>{t('receiptAccessBody')}</p><Link to="/">{t('goFile')}</Link></section>;
   async function recoverReceipt() {
@@ -300,18 +353,33 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
     });
     setCopyState(copied ? 'success' : 'failure');
   }
-  return <article className="receipt" aria-labelledby="receipt-title">
-    <div className="receipt-heading"><p className="sample-label">{t('desk')}</p><h1 id="receipt-title">{t('receiptTitle')}</h1><span className="status">{t('receiptStatusSubmitted')}</span></div>
+  return <article className="receipt case-dashboard" aria-labelledby="receipt-title">
+    <div className="receipt-heading"><p className="sample-label">{language==='hi'?'आपका निजी केस':'Your private case'} · {t('desk')}</p><h1 id="receipt-title">{language==='hi'?'शिकायत की जानकारी':'Your complaint'}</h1><span className="status">{t('receiptStatusSubmitted')}</span><p className="receipt-lead">{language==='hi'?'यह मामला केवल काल्पनिक प्रदर्शन में दर्ज है। हर भाग को अलग खोलें।':'This case is recorded in the fictional demo only. Choose what you want to review below.'}</p></div>
     <dl className="receipt-meta"><div><dt>{t('reference')}</dt><dd className="reference" id="case-reference">{loadedRecord.id}</dd></div><div><dt>{t('submitted')}</dt><dd><time dateTime={loadedRecord.submittedAt}>{new Date(loadedRecord.submittedAt).toLocaleString(locale)}</time></dd></div><div><dt>{t('office')}</dt><dd>{t('desk')}</dd></div></dl>
-    <section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
+    <nav className="case-tabs" aria-label={language==='hi'?'केस का मेनू':'Case navigation'}>{availablePanels.map(key=><button key={key} type="button" className={activePanel===key?'active':''} aria-current={activePanel===key?'page':undefined} onClick={()=>switchPanel(key)}>{({
+ overview:language==='hi'?'सारांश':'Overview',
+ evidence:language==='hi'?'साक्ष्य':'Evidence',
+ timeline:language==='hi'?'प्रगति':'Progress',
+ response:language==='hi'?'कार्यालय जवाब':'Office reply',
+ audit:language==='hi'?'जवाब की जाँच':'Check reply',
+ next:language==='hi'?'अगले कदम':'Next steps'
+} as Record<CasePanel,string>)[key]}</button>)}</nav>
+    {activePanel==='overview'&&<section className="case-status-panel" aria-labelledby="case-progress-title"><h2 id="case-progress-title">{language==='hi'?'अभी आपके मामले की स्थिति':'Your case at a glance'}</h2>
+     <ol className="case-progress"><li className="complete"><span>✓</span><div><strong>{language==='hi'?'शिकायत दर्ज':'Record created'}</strong><small>{language==='hi'?'निजी रसीद उपलब्ध':'Private receipt available'}</small></div></li>
+     <li className={responseCheck==='available'?'complete':''}><span>{responseCheck==='available'?'✓':'2'}</span><div><strong>{language==='hi'?'कार्यालय का जवाब':'Office response'}</strong><small>{responseCheck==='available'?(language==='hi'?'जवाब दर्ज है':'A response is recorded'):responseCheck==='missing'?(language==='hi'?'अभी जवाब दर्ज नहीं':'Not recorded yet'):responseCheck==='error'?(language==='hi'?'स्थिति नहीं जाँची जा सकी':'Could not verify status'):(language==='hi'?'स्थिति देखी जा रही है':'Checking status')}</small></div></li>
+     <li className={responseCheck==='available'?'ready':''}><span>3</span><div><strong>{language==='hi'?'जवाब देखें और तुलना करें':'Read and compare'}</strong><small>{responseCheck==='available'?(language==='hi'?'अब जवाब खोल सकते हैं':'Available now'):(language==='hi'?'जवाब दर्ज होने पर खुलेगा':'Available after a recorded response')}</small></div></li></ol>
+     {(responseCheck==='error'||responseCheck==='missing')&&<p>{language==='hi'?'यह जाँचता है कि कोई नया कार्यालय जवाब दर्ज हुआ है या नहीं।':'This checks whether a new office response has been recorded.'}</p>}
+     {(responseCheck==='error'||responseCheck==='missing')&&<button type="button" className="secondary-button" onClick={()=>setRetry(v=>v+1)}>{language==='hi'?'नया जवाब देखें':'Check for a new reply'}</button>}
+    </section>}
+    {activePanel==='overview'&&<section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>
       <ol className="saved-concerns">{loadedRecord.concerns.map((concern, index) => <li key={`${index}-${concern.type}`}><div className="saved-concern-label"><span>{t('concern')} {index + 1}</span><span>{t(concern.type)}</span></div><p className="preserve">{concern.wording}</p></li>)}</ol>
-    </section>
-    <p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/">{t('another')}</Link></div>
-    {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}
-    <RecordVerification api={api} language={language} id={loadedRecord.id}/>
-    <IntakeProvenance api={api} language={language} id={loadedRecord.id}/>
-    <EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>
-    <WorkflowWorkspace api={api} language={language} caseId={id}/>
+    </section>}
+    {activePanel==='overview'&&<><p className="receipt-limit">{t('receiptLimit')}</p><div className="receipt-actions"><button type="button" onClick={() => void copyReference()}>{t('copyReference')}</button><button type="button" onClick={() => window.print()}>{t('print')}</button><Link className="secondary-link" to="/file">{t('another')}</Link></div>
+    {copyState !== 'idle' && <p className="copy-feedback" role="status" aria-live="polite">{t(copyState === 'success' ? 'referenceCopied' : 'referenceCopyFailed')}</p>}</>}
+    {activePanel==='evidence'&&<><RecordVerification api={api} language={language} id={loadedRecord.id}/><IntakeProvenance api={api} language={language} id={loadedRecord.id}/></>}
+    {activePanel==='timeline'&&<EscalationTimeline key={loadedRecord.id} api={api} language={language} id={loadedRecord.id}/>}
+    {(activePanel==='response'||activePanel==='audit'||activePanel==='next')&&<WorkflowWorkspace api={api} language={language} caseId={id} panel={activePanel}/>} 
+    <nav className="case-next-actions" aria-label={language==='hi'?'अगला भाग':'Next section'}>{adjacentCasePanel(activePanel,responseCheck,-1)&&<button type="button" className="secondary-button" onClick={()=>{const prev=adjacentCasePanel(activePanel,responseCheck,-1);if(prev)switchPanel(prev);}}>{language==='hi'?'← पिछला':'← Previous'}</button>}{adjacentCasePanel(activePanel,responseCheck,1)&&<button type="button" onClick={()=>{const next=adjacentCasePanel(activePanel,responseCheck,1);if(next)switchPanel(next);}}>{language==='hi'?'अगला भाग →':'Next section →'}</button>}</nav>
   </article>;
 }
 

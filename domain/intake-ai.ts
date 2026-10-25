@@ -5,12 +5,43 @@ const field=z.object({value:z.string().min(1).max(2000),citations:z.array(citati
 export const reportSchema=z.object({allegation:field,time:field,location:field,department:field,concerns:z.array(z.object({type:z.enum(['service','conduct','mixed']),field}).strict()).min(1).max(10),timeline:z.array(field).max(12),missing:z.array(z.string().max(200)).max(10)}).strict();
 export type Source={id:string;kind:string;sha256:string;segments:{location:string;text:string}[]};
 export type AIReport=z.infer<typeof reportSchema>;
-export const generationSchema=z.object({text:z.string().max(12000),evidenceIds:z.array(z.string().uuid()).max(5),mode:z.enum(['prepared','live'])}).strict();
+export const generationSchema=z.object({text:z.string().max(12000),evidenceIds:z.array(z.string().uuid()).max(5),mode:z.enum(['prepared','live']),concerns:z.array(z.object({type:z.enum(['service','conduct','mixed']),wording:z.string().trim().min(1).max(2000)}).strict()).max(30).optional()}).strict();
 export function validateReport(value:unknown,sources:Source[]):AIReport{
  const report=reportSchema.parse(value);const fields=[report.allegation,report.time,report.location,report.department,...report.concerns.map(c=>c.field),...report.timeline];
+ // A citizen asking for an answer does not establish the event as true.
+ for(const f of [report.allegation,report.time,report.location,report.department,...report.timeline]){
+  if(f.citations.some(c=>c.sourceId==='requested-answers'))throw Error('Citizen questions are not evidence of events');
+ }
  for(const f of fields){if(f.value==='not stated'){if(f.citations.length)throw Error('Missing field cannot claim sources');continue;}if(!f.citations.length)throw Error('Source required');for(const c of f.citations){const s=sources.find(s=>s.id===c.sourceId);if(!s?.segments[c.segment]?.text.includes(c.quote))throw Error('Unsupported source or quotation');}}
  return report;
 }
+/**
+ * Repair only formatting of existing source quotations. Some structured-output
+ * models fold line breaks or multiple spaces into a single space. The stored
+ * source remains authoritative: never trust an invented paraphrase or source ID.
+ * Require an unambiguous, case-sensitive whitespace-equivalent substring.
+ */
+export function canonicalizeReportWhitespace(value:unknown,sources:Source[]):AIReport{
+ const parsed=reportSchema.parse(value);
+ const repair=(item:typeof parsed.allegation)=>{
+  const citations=item.citations.map(c=>{
+   const original=sources.find(s=>s.id===c.sourceId)?.segments[c.segment]?.text;
+   if(!original||original.includes(c.quote))return c;
+   const trimmed=c.quote.trim();
+   // Escape every regex metacharacter before relaxing runs of whitespace only.
+   if(!trimmed||!/\s/.test(trimmed))return c;
+   const pattern=trimmed.split(/\s+/).map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,(ch)=>'\\'+ch)).join('\\s+');
+   const re=new RegExp(pattern,'g');
+   const found=[...original.matchAll(re)];
+   if(found.length!==1)return c;
+   return {...c,quote:found[0][0]};
+  });
+  return {...item,citations};
+ };
+ const normalized={...parsed,allegation:repair(parsed.allegation),time:repair(parsed.time),location:repair(parsed.location),department:repair(parsed.department),concerns:parsed.concerns.map(c=>({...c,field:repair(c.field)})),timeline:parsed.timeline.map(repair)};
+ return validateReport(normalized,sources);
+}
+
 export function preparedReport(sources:Source[]):AIReport{
  const s=sources.find(s=>s.segments.length===1&&s.segments[0].text===fixtureText);if(!s||sources.some(s=>s.segments.length!==1||s.segments[0].text!==fixtureText))throw Error('PREPARED_FIXTURE_ONLY');
  const f=(value:string,quote:string)=>({value,citations:[{sourceId:s.id,segment:0,quote}]});const absent={value:'not stated',citations:[]};

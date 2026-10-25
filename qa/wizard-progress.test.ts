@@ -1,0 +1,2 @@
+import {it,expect} from 'vitest';import {visitWizard,continueWizard} from '../web/wizard-state';
+it('retains furthest reached step across repeated backtracking and prevents first-entry jumps',()=>{let p={current:0,furthest:0};expect(visitWizard(p,2)).toEqual(p);expect(continueWizard(p,false)).toEqual(p);p=continueWizard(p,true);p=continueWizard(p,true);p=visitWizard(p,1);expect(p).toEqual({current:1,furthest:2});expect(visitWizard(p,2).current).toBe(2);expect(visitWizard(p,3)).toEqual(p);expect(visitWizard(p,-1)).toEqual(p);});

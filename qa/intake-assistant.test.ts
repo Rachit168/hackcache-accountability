@@ -11,7 +11,7 @@ function findGenerate(node:ReactNode):ReactElement<{onClick:()=>Promise<void>;ch
  if(!node||typeof node!=='object')return;
  if(Array.isArray(node)){for(const child of node){const found=findGenerate(child);if(found)return found;}return;}
  const e=node as ReactElement<{onClick:()=>Promise<void>;children?:ReactNode}>;
- if(e.type==='button'&&e.props.children==='Generate source-linked draft')return e;
+ if(e.type==='button'&&e.props.children==='Help me organize my complaint')return e;
  return findGenerate(e.props?.children);
 }
 const draft=(id:string)=>({id,body:{sources:[],report:{},provenance:{mode:'live',provider:'fixture'}}}) as unknown as IntakeDraft;

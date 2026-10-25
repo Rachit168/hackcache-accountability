@@ -115,8 +115,8 @@ function App() {
         </>} />
         <Route path="/cases" element={<FindCase language={language}/>} />
         <Route path="/cases/:id" element={<CasePage ready={!!config?.ready} signedIn={signedIn} language={language} t={t} />} />
-        <Route path="/staff" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} api={operatorApi} language={language}/>} />
-        <Route path="/staff/:id" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} api={operatorApi} language={language}/>} />
+        <Route path="/staff" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} onSignedOut={()=>setOperatorSignedIn(false)} api={operatorApi} language={language}/>} />
+        <Route path="/staff/:id" element={<StaffPortal client={operatorClient} active={operatorSignedIn} onReady={()=>setOperatorSignedIn(true)} onSignedOut={()=>setOperatorSignedIn(false)} api={operatorApi} language={language}/>} />
         <Route path="*" element={<section className="notice"><h1>{t('pageNotFound')}</h1><Link to="/">{t('returnWorkspace')}</Link></section>} />
       </Routes>
       <section id="privacy" className="privacy" aria-labelledby="privacy-title"><h2 id="privacy-title">{t('usingDemo')}</h2><p>{t('privacyBody')}</p></section>

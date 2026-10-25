@@ -639,3 +639,27 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 .staff-version-select strong{font-size:16px;color:#23493c}
 .staff-version-select select{width:100%;max-width:100%;min-width:0;font-size:16px;min-height:46px;background:#fff}
 .staff-version-select .field-help{margin:0;line-height:1.5}
+
+
+/* Post-attachment messages belong inside the evidence step's padded content. */
+.wizard-evidence{min-width:0;max-width:100%;box-sizing:border-box}
+.wizard-evidence>.ai-attachment-confirmation,
+.wizard-evidence>.wizard-evidence-notice{
+ box-sizing:border-box;min-width:0;max-width:100%;margin:18px 27px 22px;padding:16px 19px;
+ border-radius:8px;overflow-wrap:anywhere;word-break:normal;
+}
+.wizard-evidence>.ai-attachment-confirmation{border:1px solid #bdd8c9;border-left:4px solid #26745c;background:#f0f7f1}
+.ai-attachment-confirmation-heading{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.ai-attachment-confirmation-heading strong{font-size:16px;line-height:1.5;color:#23533f;min-width:0}
+.ai-attachment-confirmation-mark{flex:0 0 25px;display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#26745c;color:#fff;font-weight:800}
+.ai-attachment-confirmation p{margin:9px 0 0!important;color:#33594b;font-size:15px;line-height:1.65}
+.wizard-evidence>.wizard-evidence-notice{border:1px solid #e3d6b7;background:#fffcf5;color:#665132;font-size:15px;line-height:1.6}
+.wizard-evidence .ai-apply-help{
+ box-sizing:border-box;max-width:100%;margin:15px 0 0;padding:12px 16px;
+ border-left:3px solid #a3c2b3;background:#f4f8f5;border-radius:0 6px 6px 0;
+ overflow-wrap:anywhere;font-size:15px;line-height:1.65;color:#35574a;
+}
+@media(max-width:560px){
+ .wizard-evidence>.ai-attachment-confirmation,.wizard-evidence>.wizard-evidence-notice{margin:16px 16px 19px;padding:14px}
+ .wizard-evidence .ai-apply-help{padding:12px}
+}

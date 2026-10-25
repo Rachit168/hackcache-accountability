@@ -5,7 +5,7 @@ import type {Language} from './i18n';
 import {StaffSession,WorkflowWorkspace} from './workflow';
 type StaffApi=<T=unknown>(path:string,init?:RequestInit)=>Promise<T>;
 
-export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{client?:SupabaseClient;active:boolean;onReady:()=>void;onSignedOut:()=>void;api:StaffApi;language:Language}){
+export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{client?:SupabaseClient;active:boolean;onReady:()=>void;onSignedOut?:()=>void;api:StaffApi;language:Language}){
  const hi=language==='hi';const {id}=useParams();
  const [revision,setRevision]=useState(0);const [email,setEmail]=useState('');const [password,setPassword]=useState('');
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
@@ -22,7 +22,7 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
  }
  async function logout(){
   if(!client||busy)return;setBusy(true);setMessage('');
-  try{const result=await client.auth.signOut();if(result.error)throw result.error;setRevision(v=>v+1);onSignedOut();}
+  try{const result=await client.auth.signOut();if(result.error)throw result.error;setRevision(v=>v+1);onSignedOut?.();}
   catch{setMessage(hi?'साइन आउट नहीं हो सका। पुनः प्रयास करें।':'Could not sign out. Try again.');}
   finally{setBusy(false);}
  }

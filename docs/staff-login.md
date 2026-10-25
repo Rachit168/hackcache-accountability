@@ -2,6 +2,29 @@
 
 Staff workspace URL: `/staff`. This address is intentionally not linked from citizen pages. Hiding the URL **does not** enforce security: server-side Supabase identity verification, `hc_private.demo_principals`, reviewer assignments, and office-scoped released versions enforce case access. A previously authenticated staff session stays available until it expires or is signed out, just like an ordinary staff dashboard.
 
+## Fast demo setup — reviewer and office in one local run
+
+This is the simplest way to see both staff ends. The app does **not** create roles from an entered email or password. A private administrator first creates each Supabase Auth account and records exactly one authorized role in `hc_private.demo_principals`. Passwords remain Supabase-managed. A reviewer additionally requires an explicit case assignment.
+
+1. Open a PowerShell terminal in `D:\\project\\Hack Cache`. Pull the feature branch and check that your existing private `.env` contains the dedicated project's `MIGRATION_DATABASE_URL` (never paste it into chat).
+2. Find the UUID of your existing fictional citizen complaint (the reference shown on its receipt).
+3. Run this command, substituting the UUID. PowerShell will privately prompt for the project-specific Supabase service-role/secret key and **two separate new emails and passwords**:
+
+```powershell
+Set-Location 'D:\project\Hack Cache'
+.\scripts\provision-staff-pair.ps1 -ReviewerCaseId 'PUT-YOUR-CASE-UUID-HERE'
+```
+
+If you already created one or both accounts, **do not rerun** the pair helper: it deliberately refuses to overwrite existing identities or change existing roles. Use the separate administrator assignment procedure below if your reviewer exists but the inbox is empty. For the helper, a unique, previously unused email is required for each new staff account. The key and passwords are process-only and cleared from environment variables when the script finishes.
+
+4. Open `http://127.0.0.1:5173/staff` (or your current local frontend URL) in a **new browser profile** and sign in with the reviewer email/password. Expect **Reviewer workspace** and exactly the cases assigned to that reviewer. Open the assigned complaint, inspect private evidence, then go to **Take action → Prepare office version → Preview outgoing content → Approve and release**. Any changed or omitted text needs a recorded review reason.
+5. Sign out. In another browser profile, sign in using the separate office email/password. Expect **Office workspace**. Open the newly released case, choose **Take action**, acknowledge that specific version, then enter a written response. The action panel advances only when the server has recorded the prior operation; **History** remains read-only.
+6. Open the original citizen receipt under the **same citizen browser identity** used to submit it. Reload and inspect the response and progress sections. A response is a recorded statement, **not a confirmed resolution**. The citizen may compare response coverage and record a separate internal dispute.
+
+**If something fails:** A wrong password is different from a valid account without a provisioned role. The staff page now explains both cases. If authorization cannot be checked due to a temporary connection failure, use **Retry staff role check** without creating a new identity. If the reviewer has the right role but sees no cases, use administrator-only `database/assign-reviewer.ts` to assign an existing complaint. If the office sees no cases, make sure the reviewer released a version to the fictional sample municipal desk; office staff cannot see raw private submissions.
+
+**Security:** Do not paste either password, service-role key, JWT/session file, `.env`, or database URI into ChatGPT, source control, presentation slides or browser screenshots. This is a fictional hackathon demonstration, not a real institutional role verification system.
+
 ## Real email/password staff accounts (new)
 
 Staff sign-in uses Supabase Auth email/password. **No public registration or client-selected role** is provided. Existing anonymous citizen accounts cannot authorize staff access.

@@ -23,9 +23,9 @@ const copy={
 };
 type Api=<T=unknown>(path:string,init?:RequestInit)=>Promise<T>;
 function officeLabel(code:string|undefined,language:Language,t:typeof copy.en){if(code==='SAMPLE_MUNICIPAL_DESK')return `${t.sampleOffice} (${code})`;if(code==='UNRELATED_DEMO_OFFICE')return `${t.otherOffice} (${code})`;return code??'—';}
-export function StaffSession({client,onReady,language}:{client?:SupabaseClient;onReady:()=>void;language:Language}){
+export function StaffSession({client,onReady,language}:{client?:SupabaseClient;onReady:()=>Promise<void>|void;language:Language}){
  const t=copy[language];const [error,setError]=useState(false);
- return <section className="notice workflow-session"><strong>{t.demo}</strong><p>{t.scope}</p><label>{t.login}<input type="file" accept=".json" onChange={async e=>{setError(false);try{const file=e.target.files?.[0];if(!file||!client)throw Error();const value=JSON.parse(await file.text());const result=await client.auth.setSession({access_token:value.access_token,refresh_token:value.refresh_token});if(result.error)throw result.error;onReady();}catch{setError(true);}}}/></label>{error&&<p role="alert">{t.fileError}</p>}</section>;
+ return <section className="notice workflow-session"><strong>{t.demo}</strong><p>{t.scope}</p><label>{t.login}<input type="file" accept=".json" onChange={async e=>{setError(false);try{const file=e.target.files?.[0];if(!file||!client)throw Error();const value=JSON.parse(await file.text());const result=await client.auth.setSession({access_token:value.access_token,refresh_token:value.refresh_token});if(result.error)throw result.error;await onReady();}catch{setError(true);}}}/></label>{error&&<p role="alert">{t.fileError}</p>}</section>;
 }
 export function WorkflowWorkspace({api,language,caseId,panel}:{api:Api;language:Language;caseId?:string;panel?:'none'|'response'|'audit'|'next'}){
  const params=useParams();const id=caseId??params.id;const t=copy[language];

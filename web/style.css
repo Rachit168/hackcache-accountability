@@ -584,3 +584,14 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 .escalation-track li small{font-size:13px;line-height:1.35;font-weight:700;color:#3a554b}
 .escalation-track li[aria-current="step"] small{color:#145442}
 @media(max-width:650px){.escalation-clock{grid-template-columns:1fr}.escalation-dashboard{padding:14px}.escalation-track{flex-direction:column;gap:0}.escalation-track li{border-top:0;border-left:4px solid #cdd8d1;padding:12px 10px}.escalation-track li.complete{border-top:0;border-left-color:#206d59}}
+
+/* Concrete legal-aid action; source and applicability remain explicit. */
+.legal-aid-action{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(185px,.5fr);gap:24px;border-top:4px solid #1b6b56;background:#eff6ee;padding:22px 26px;margin:24px 0 15px}
+.legal-aid-action h3{font-size:23px;line-height:1.3;color:#204e3f;margin:9px 0}
+.legal-aid-action p{font-size:16px;line-height:1.7;margin:8px 0 13px}
+.legal-aid-action small{color:#506a5d;line-height:1.45}
+.legal-aid-contact{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;border-left:1px solid #c6d9ca;padding-left:24px;gap:8px}
+.legal-aid-contact>span{font-size:13px;font-weight:750;text-transform:uppercase;letter-spacing:.04em}
+.legal-aid-contact>a:first-of-type{color:#195845;font-size:39px;line-height:1.1;font-weight:800;text-decoration:none}
+.legal-aid-contact>a:last-child{font-weight:750;font-size:15px}
+@media(max-width:650px){.legal-aid-action{grid-template-columns:1fr;padding:18px;gap:14px}.legal-aid-contact{border-left:0;border-top:1px solid #c6d9ca;padding:16px 0 0}}

@@ -6,6 +6,7 @@ import type {Language} from './i18n';
 export function Guidance({language,situation='awaiting'}:{language:Language;situation?:'awaiting'|'acknowledged'|'response'}){
  const hi=language==='hi';
  const [expanded,setExpanded]=useState<string[]>([]);
+ const [showAllTopics,setShowAllTopics]=useState(false);
  function toggle(id:string){setExpanded(items=>items.includes(id)?items.filter(v=>v!==id):[...items,id]);}
  return <section className="saved-account guidance-view" aria-labelledby="guidance-title">
   <p className="eyebrow">{hi?'जानकारी और मदद':'Information and help'}</p>
@@ -16,7 +17,7 @@ export function Guidance({language,situation='awaiting'}:{language:Language;situ
     <div><p className="eyebrow">{hi?'भारत में मुफ्त कानूनी सहायता':'Free legal help in India'}</p><h3>{hi?'पहला संपर्क: नालसा हेल्पलाइन':'First contact: NALSA helpline'}</h3><p>{hi?'नालसा की टोल-फ्री कानूनी सहायता हेल्पलाइन पर संपर्क करें या अपने जिले के न्यायालय में जिला विधिक सेवा प्राधिकरण (DLSA) जाएँ। सलाह और पात्रता का निर्णय वहाँ किया जाता है, जनवाणी पर नहीं।':'Call the national free legal-aid helpline or approach the District Legal Services Authority (DLSA) at your district court. That authority assesses the next steps and eligibility—not Janvaani.'}</p><small>{hi?'आधिकारिक नालसा स्रोत; यह कोई सरकारी आवेदन नहीं भेजता।':'Official NALSA source; this demo does not file an application.'}</small></div>
     <div className="legal-aid-contact"><span>{hi?'टोल-फ्री सहायता':'Toll-free helpline'}</span><a href="tel:15100">15100</a><a href="https://nalsa.gov.in/legal-aid/" target="_blank" rel="noopener noreferrer">{hi?'कैसे आवेदन करें':'How to apply'} <span aria-hidden="true">↗</span></a></div>
    </section>
-   <div className="guidance-options">{guidanceCards.map((c,i)=><article className="guidance-option" key={c.id}>
+   <div className="guidance-options">{(showAllTopics?guidanceCards:guidanceCards.slice(0,3)).map((c,i)=><article className="guidance-option" key={c.id}>
    <div className="guidance-number" aria-hidden="true">{String(i+1).padStart(2,'0')}</div>
    <div className="guidance-content">
     <h3>{c.question[language]}</h3>
@@ -29,6 +30,6 @@ export function Guidance({language,situation='awaiting'}:{language:Language;situ
     </div>
     <div className="guidance-expanded" id={'guidance-'+c.id} hidden={!expanded.includes(c.id)}><h4>{hi?'इस स्रोत से क्या पता चलता है':'What the source establishes'}</h4><p>{c.establishes[language]}</p><h4>{hi?'ध्यान रखने की सीमाएँ':'Important limits'}</h4><p>{c.limits[language]}</p><small>{hi?'स्रोत जाँचा गया':'Source checked'}: {c.verified}</small></div>
    </div>
-  </article>)}</div>
+  </article>)}<button type="button" className="secondary-button guidance-more" aria-expanded={showAllTopics} onClick={()=>setShowAllTopics(v=>!v)}>{showAllTopics?(hi?'कम प्रश्न दिखाएँ':'Show fewer questions'):(hi?'और विषय देखें (3)':'Show 3 more topics')}</button></div>
  </section>;
 }

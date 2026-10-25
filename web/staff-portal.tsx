@@ -3,6 +3,7 @@ import {Link} from 'react-router-dom';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Language} from './i18n';
 import {StaffSession,WorkflowWorkspace} from './workflow';
+import {signInStaff,verifyStaffSession,type StaffLoginResult} from './staff-login-state';
 type StaffApi=<T=unknown>(path:string,init?:RequestInit)=>Promise<T>;
 export const nextStaffSessionRevision=(revision:number)=>revision+1;
 
@@ -10,34 +11,41 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
  const hi=language==='hi';const isCaseView=typeof window!=='undefined'&&/^\/staff\/[^/]+/.test(window.location.pathname);
  const [revision,setRevision]=useState(0);const [email,setEmail]=useState('');const [password,setPassword]=useState('');
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
- const [guide,setGuide]=useState(false);
- function sessionReady(){setRevision(nextStaffSessionRevision);setMessage('');onReady();}
- async function importedSessionReady(){
-  try{
-   // The local JSON is only a credential transport, never a grant of staff access.
-   const queue=await api<{kind:string}>('/workflow');
-   if(!['reviewer','office'].includes(queue.kind))throw Error('NO_STAFF_ROLE');
-   sessionReady();
-  }catch{
-   // An unauthorized imported session must not linger as an apparent staff identity.
-   try{await client?.auth.signOut();}catch{/* Server permissions remain the authority. */}
-   onSignedOut?.();
-   throw Error('UNAUTHORIZED_STAFF_SESSION');
+ const [guide,setGuide]=useState(false);const [authIssue,setAuthIssue]=useState<StaffLoginResult['status']>();
+ function sessionReady(){setRevision(nextStaffSessionRevision);setMessage('');setAuthIssue(undefined);onReady();}
+ const authorizationMessage=(status:StaffLoginResult['status'])=>{
+  switch(status){
+   case 'invalid-credentials':return hi?'ईमेल या पासवर्ड सही नहीं है। अधिकृत कर्मचारी खाते से फिर प्रयास करें।':'Email or password was not accepted. Retry with your provisioned staff credentials.';
+   case 'not-provisioned':return hi?'ईमेल/पासवर्ड मान्य थे, लेकिन इस खाते को समीक्षक या कार्यालय की भूमिका नहीं दी गई है। प्रोजेक्ट प्रशासक से भूमिका तय करवाएँ।':'Your credentials were accepted, but this account has no authorized reviewer or office role. Ask the project administrator to provision its role.';
+   case 'service-unavailable':return hi?'सत्र मिला, लेकिन सर्वर से भूमिका की पुष्टि नहीं हुई। फिर जाँचें; नया खाता या भूमिका नहीं बनाई गई।':'Signed in, but staff authorization could not be confirmed. Retry the role check without creating a new identity.';
+   case 'session-missing':return hi?'मान्य कर्मचारी सत्र नहीं मिला। ईमेल और पासवर्ड से फिर प्रवेश करें।':'No valid staff session is available. Sign in again with your credentials.';
+   default:return '';
   }
+ };
+ async function importedSessionReady(){
+  if(!client)throw Error('NO_CLIENT');
+  const outcome=await verifyStaffSession(client.auth,()=>api('/workflow'));
+  if(outcome.status==='authorized'){setAuthIssue(undefined);sessionReady();return;}
+  setAuthIssue(outcome.status);setMessage(authorizationMessage(outcome.status));onSignedOut?.();
+  throw Error('UNAUTHORIZED_STAFF_SESSION');
  }
  async function login(e:React.FormEvent){
-  e.preventDefault();if(!client||busy)return;setBusy(true);setMessage('');
+  e.preventDefault();if(!client||busy)return;setBusy(true);setMessage('');setAuthIssue(undefined);
   try{
-   const result=await client.auth.signInWithPassword({email:email.trim(),password});
-   if(result.error||!result.data.session)throw Error();
-   // A valid Supabase password is not a staff role. Verify the server-scoped queue
-   // before granting entry to the staff interface.
-   const authorized=await api<{kind:string}>('/workflow');
-   if(!['reviewer','office'].includes(authorized.kind)){
-    await client.auth.signOut();throw Error('NO_STAFF_ROLE');
-   }
-   setPassword('');sessionReady();
-  }catch{setMessage(hi?'लॉगिन नहीं हो सका। कर्मचारी खाता, पासवर्ड या सेवा जाँचें। नागरिक खाते से प्रवेश नहीं मिलता।':'Sign-in unsuccessful. Check your provisioned staff account, password and connection. Citizen accounts have no staff access.');}
+   const outcome=await signInStaff(client.auth,email,password,()=>api('/workflow'));
+   setPassword('');
+   if(outcome.status==='authorized'){sessionReady();return;}
+   setAuthIssue(outcome.status);setMessage(authorizationMessage(outcome.status));onSignedOut?.();
+  }catch{setAuthIssue('service-unavailable');setMessage(authorizationMessage('service-unavailable'));}
+  finally{setBusy(false);}
+ }
+ async function retryAuthorization(){
+  if(!client||busy)return;setBusy(true);setMessage('');
+  try{
+   const outcome=await verifyStaffSession(client.auth,()=>api('/workflow'));
+   if(outcome.status==='authorized'){setAuthIssue(undefined);sessionReady();return;}
+   setAuthIssue(outcome.status);setMessage(authorizationMessage(outcome.status));onSignedOut?.();
+  }catch{setAuthIssue('service-unavailable');setMessage(authorizationMessage('service-unavailable'));}
   finally{setBusy(false);}
  }
  async function logout(){
@@ -51,6 +59,7 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
   <div className="staff-heading"><div><h1>{hi?'कर्मचारी कार्यक्षेत्र':'Staff workspace'}</h1><p className="staff-intro">{hi?'नियुक्त समीक्षक और संबंधित कार्यालय कर्मी ही अपने अधिकार वाले मामले देख सकते हैं।':'Only appointed reviewers and office staff can open their server-authorized cases.'}</p></div>
   {active&&<button type="button" className="secondary-button" disabled={busy} onClick={()=>void logout()}>{hi?'सुरक्षित साइन आउट':'Sign out securely'}</button>}</div>
   {message&&<p role="alert" className="error">{message}</p>}
+  {!active&&authIssue==='service-unavailable'&&<button type="button" className="secondary-button staff-auth-retry" disabled={busy} onClick={()=>void retryAuthorization()}>{hi?'कर्मचारी भूमिका फिर जाँचें':'Retry staff role check'}</button>}
   {!active?<section className="staff-login" aria-labelledby="staff-login-title">
    <div className="staff-login-explain"><p className="eyebrow">{hi?'सिर्फ़ अधिकृत कर्मचारी':'Authorized staff only'}</p><h2 id="staff-login-title">{hi?'कर्मचारी खाते से साइन इन करें':'Sign in with your staff account'}</h2>
    <p>{hi?'इस पोर्टल पर नागरिक शिकायत संख्या या साधारण नागरिक सत्र से प्रवेश नहीं मिलेगा। खाते का अधिकार सर्वर पर तय किया जाता है।':'A complaint number or citizen session cannot authorize this portal. Your role and case permissions are checked on the server.'}</p>

@@ -19,7 +19,7 @@ describe('staff case action journey (data-backed and role scoped)',()=>{
   expect(next.target).toBe('history');
   const last=staffCaseJourney({kind:'reviewer',versions:[released],history:[ack,answer]},'en')!;
   expect(last.steps.map(s=>s.done)).toEqual([true,true,true]);
-  expect(last.target).toBe('evidence');
+  expect(last.target).toBe('history');
   expect(last.explanation).toContain('does not verify');
  });
  it('requires actual acknowledgement of the latest office-facing version before suggesting response',()=>{
@@ -65,6 +65,8 @@ describe('staff case action journey (data-backed and role scoped)',()=>{
   expect(src).toContain("action==='complete'");
   expect(src).toContain('Response recorded for this version');
   expect(src).toContain("setStaffTab('history')");
+  expect(src).toContain("const visibleHistory=view.kind==='office'");
+  expect(src).toContain('visibleHistory.map(h=>');
  });
  it('has native next-action button, accessible milestone list and Hindi copy',()=>{
   const html=renderToStaticMarkup(<StaffCaseJourney view={{kind:'office',versions:[released],history:[ack]}} language="hi" onNavigate={vi.fn()}/>);

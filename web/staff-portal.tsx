@@ -12,6 +12,19 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
  const [guide,setGuide]=useState(false);
  function sessionReady(){setRevision(nextStaffSessionRevision);setMessage('');onReady();}
+ async function importedSessionReady(){
+  try{
+   // The local JSON is only a credential transport, never a grant of staff access.
+   const queue=await api<{kind:string}>('/workflow');
+   if(!['reviewer','office'].includes(queue.kind))throw Error('NO_STAFF_ROLE');
+   sessionReady();
+  }catch{
+   // An unauthorized imported session must not linger as an apparent staff identity.
+   try{await client?.auth.signOut();}catch{/* Server permissions remain the authority. */}
+   onSignedOut?.();
+   throw Error('UNAUTHORIZED_STAFF_SESSION');
+  }
+ }
  async function login(e:React.FormEvent){
   e.preventDefault();if(!client||busy)return;setBusy(true);setMessage('');
   try{
@@ -48,7 +61,7 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
     <button type="submit" disabled={!client||busy}>{busy?(hi?'प्रवेश जाँचा जा रहा है…':'Checking access…'):(hi?'कार्यस्थल खोलें':'Open staff workspace')}</button>
     <p className="field-help">{hi?'कर्मचारी खाते प्रोजेक्ट प्रशासक द्वारा अलग से बनाए और अधिकृत किए जाते हैं।':'Staff accounts must be provisioned and assigned by the project administrator. There is no public sign-up.'}</p>
    </form>
-   {import.meta.env.DEV&&<details className="staff-local-tool"><summary>{hi?'केवल स्थानीय परीक्षण: पुराना सत्र फ़ाइल':'Local development only: legacy test session file'}</summary><StaffSession client={client} onReady={sessionReady} language={language}/></details>}
+   {import.meta.env.DEV&&<details className="staff-local-tool"><summary>{hi?'केवल स्थानीय परीक्षण: पुराना सत्र फ़ाइल':'Local development only: legacy test session file'}</summary><StaffSession client={client} onReady={importedSessionReady} language={language}/></details>}
   </section>:<>
    <nav className="staff-navigation" aria-label={hi?'कर्मचारी नेविगेशन':'Staff navigation'}>
     <Link to="/staff" aria-current={!isCaseView?'page':undefined}>{hi?'मेरा इनबॉक्स':'My case inbox'}</Link>

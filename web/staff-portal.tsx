@@ -1,16 +1,17 @@
 import React,{useState} from 'react';
-import {Link,useParams} from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import type {Language} from './i18n';
 import {StaffSession,WorkflowWorkspace} from './workflow';
 type StaffApi=<T=unknown>(path:string,init?:RequestInit)=>Promise<T>;
+export const nextStaffSessionRevision=(revision:number)=>revision+1;
 
 export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{client?:SupabaseClient;active:boolean;onReady:()=>void;onSignedOut?:()=>void;api:StaffApi;language:Language}){
- const hi=language==='hi';const {id}=useParams();
+ const hi=language==='hi';const isCaseView=typeof window!=='undefined'&&/^\/staff\/[^/]+/.test(window.location.pathname);
  const [revision,setRevision]=useState(0);const [email,setEmail]=useState('');const [password,setPassword]=useState('');
  const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
  const [guide,setGuide]=useState(false);
- function sessionReady(){setRevision(v=>v+1);setMessage('');onReady();}
+ function sessionReady(){setRevision(nextStaffSessionRevision);setMessage('');onReady();}
  async function login(e:React.FormEvent){
   e.preventDefault();if(!client||busy)return;setBusy(true);setMessage('');
   try{
@@ -22,7 +23,7 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
  }
  async function logout(){
   if(!client||busy)return;setBusy(true);setMessage('');
-  try{const result=await client.auth.signOut();if(result.error)throw result.error;setRevision(v=>v+1);onSignedOut?.();}
+  try{const result=await client.auth.signOut();if(result.error)throw result.error;setRevision(nextStaffSessionRevision);onSignedOut?.();}
   catch{setMessage(hi?'साइन आउट नहीं हो सका। पुनः प्रयास करें।':'Could not sign out. Try again.');}
   finally{setBusy(false);}
  }
@@ -44,7 +45,7 @@ export function StaffPortal({client,active,onReady,onSignedOut,api,language}:{cl
    {import.meta.env.DEV&&<details className="staff-local-tool"><summary>{hi?'केवल स्थानीय परीक्षण: पुराना सत्र फ़ाइल':'Local development only: legacy test session file'}</summary><StaffSession client={client} onReady={sessionReady} language={language}/></details>}
   </section>:<>
    <nav className="staff-navigation" aria-label={hi?'कर्मचारी नेविगेशन':'Staff navigation'}>
-    <Link to="/staff" aria-current={!id?'page':undefined}>{hi?'मेरा इनबॉक्स':'My case inbox'}</Link>
+    <Link to="/staff" aria-current={!isCaseView?'page':undefined}>{hi?'मेरा इनबॉक्स':'My case inbox'}</Link>
     <button type="button" className={guide?'active':''} onClick={()=>setGuide(v=>!v)} aria-expanded={guide}>{hi?'काम करने की प्रक्रिया':'Workflow guide'}</button>
    </nav>
    {guide&&<section className="staff-guide"><h2>{hi?'जिम्मेदारी और प्रक्रिया':'Responsibilities and workflow'}</h2>

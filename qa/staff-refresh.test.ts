@@ -1,0 +1,5 @@
+import {it,expect,vi} from 'vitest';import type {ReactNode,ReactElement} from 'react';
+const state=vi.hoisted(()=>({value:0}));vi.mock('react',async load=>{const r=await load<typeof import('react')>();return {...r,useState:()=>[state.value,(fn:any)=>{state.value=typeof fn==='function'?fn(state.value):fn;}]};});
+import {StaffPortal} from '../web/staff-portal';import {StaffSession,WorkflowWorkspace} from '../web/workflow';
+function find(n:ReactNode,type:unknown):ReactElement<any>|undefined{if(Array.isArray(n)){for(const c of n){const v=find(c,type);if(v)return v;}return;}if(!n||typeof n!=='object')return;const e=n as ReactElement<any>;return e.type===type?e:find(e.props?.children,type);}
+it('discards the old queue and action drafts on every successful staff identity import',()=>{state.value=0;const ready=vi.fn(),props={client:{} as any,active:true,onReady:ready,api:vi.fn() as any,language:'en' as const};const before=StaffPortal(props);const old=find(before,WorkflowWorkspace)!.key;find(before,StaffSession)!.props.onReady();const after=StaffPortal(props);expect(ready).toHaveBeenCalledOnce();expect(find(after,WorkflowWorkspace)!.key).not.toBe(old);});

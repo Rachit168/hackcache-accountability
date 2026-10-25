@@ -20,7 +20,7 @@ describe('UX structural regressions (source checks, not browser proof)',()=>{
  it('maintains separate operator and citizen storage identities',()=>{
   expect(main).toContain("storageKey:'janvaani-operator-session'");
   expect(main).toContain("storageKey:'sb-'");
-  expect(main).toContain('StaffSession client={client}');
+  expect(readFileSync('web/staff-portal.tsx','utf8')).toContain('StaffSession client={client}');
   expect(main).toContain('operatorApiFor(operatorClient,api)');
   expect(main).not.toContain('StaffSession client={auth}');
  });

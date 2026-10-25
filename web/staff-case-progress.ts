@@ -44,3 +44,16 @@ export function staffCaseJourney(view:StaffJourneyView,language:Language):StaffJ
  if(!answered)return {role:'office',steps,next:hi?'इस संस्करण पर लिखित जवाब दें':'Write a response to this version',explanation:hi?'प्राप्ति स्वीकार है। जवाब विशिष्ट सवालों को संबोधित करे और केवल दावा किए गए काम बताए।':'Receipt is recorded. Address the released questions and describe only work actually claimed, not verified resolution.',action:hi?'जवाब लिखें':'Write response',target:'actions'};
  return {role:'office',steps,next:hi?'अपने दर्ज जवाब की समीक्षा करें':'Review the recorded response',explanation:hi?'जवाब दर्ज है। समाधान या नागरिक की सहमति सत्यापित नहीं हुई।':'A response exists. Resolution and citizen agreement remain unverified.',action:hi?'इतिहास देखें':'View response history',target:'history'};
 }
+
+/** Browsing a historic office version changes only the displayed server-authorized
+ * version. It never grants access, changes a submitted command or changes the
+ * status summary of the latest released version.
+ */
+export function displayedWorkflowVersions<T extends {id:string}>(
+ kind:string,versions:readonly T[]|undefined,selection:string,
+):T[]{
+ if(!versions)return [];
+ if(kind!=='office')return [...versions];
+ const chosen=selection==='latest'?versions.at(-1)?.id:selection;
+ return versions.filter(version=>version.id===chosen);
+}

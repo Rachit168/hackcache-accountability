@@ -15,10 +15,12 @@ import { RecordVerification } from './record-verification';
 import { EvidenceUpload } from './evidence-upload';
 import {IntakeAssistant,IntakeProvenance,type IntakeDraft} from './intake-assistant';
 import {EscalationTimeline} from './escalation';
-import {safeFilename} from '../domain/intake-ai';
+import {safeFilename,fileSize} from '../domain/intake-ai';
 import {casePanels,resolveCasePanel,adjacentCasePanel,type CasePanel,type ResponseCheck} from './case-navigation';
 import {operatorApiFor} from './operator-api';
 import {authenticatedFetch} from './api-transport';
+import {visitWizard,continueWizard} from './wizard-state';
+import type {EvidenceSummary} from './evidence-summary';
 
 type Config = { ready: boolean; url?: string; publishableKey?: string };
 type ConcernType = 'service' | 'conduct' | 'mixed';
@@ -34,6 +36,7 @@ async function api<T = { error?: string }>(path: string, init: RequestInit = {})
     response = await authenticatedFetch(path,init,async()=>(await auth?.auth.getSession())?.data.session?.access_token);
   } catch { throw new ApiError(0, 'network'); }
   if(response.ok&&response.headers.get('Content-Disposition')?.startsWith('attachment')){const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;const encoded=response.headers.get('Content-Disposition')?.split("filename*=UTF-8''")[1];link.download=safeFilename(encoded?decodeURIComponent(encoded):'evidence');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return undefined as T;}
+  if(response.ok&&response.headers.get('Content-Type')?.startsWith('audio/'))return await response.blob() as T;
   const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new ApiError(response.status, body.error ?? 'request');
   return body;
@@ -145,7 +148,7 @@ function LanguageToggle({ language, setLanguage, t }: { language: Language; setL
 
 function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: Language; t: Translator }) {
   const navigate = useNavigate();
-  const [step,setStep] = useState(0);
+  const [progress,setProgress]=useState({current:0,furthest:0});const step=progress.current;const setStep=(next:number|((step:number)=>number))=>setProgress(p=>visitWizard(p,typeof next==='function'?next(p.current):next));
   const [narrative, setNarrative] = useState('');
   const [concerns, setConcerns] = useState<Concern[]>(() => [
     { uiId: crypto.randomUUID(), type: 'service', wording: '' },
@@ -157,7 +160,7 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [attempt, setAttempt] = useState(false);
   const [evidenceIds,setEvidenceIds]=useState<string[]>([]);
-  const [evidenceReady,setEvidenceReady]=useState(true);
+  const [evidenceReady,setEvidenceReady]=useState(true);const [assistantReady,setAssistantReady]=useState(true);const [evidenceFiles,setEvidenceFiles]=useState<EvidenceSummary[]>([]);const [assistantFiles,setAssistantFiles]=useState<EvidenceSummary[]>([]);
   const [assistantIds,setAssistantIds]=useState<string[]>([]);
   const [intakeDraft,setIntakeDraft]=useState<string>();
   const reviewKey=useRef(crypto.randomUUID());
@@ -188,9 +191,9 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if(step!==3){setStep(3);return;}
+    if(step!==3){nextStep();return;}
     setError(undefined);
-    if(!evidenceReady)return;
+    if(!evidenceReady||!assistantReady)return;
     const parsed = complaintSchema.safeParse(payload);
     if (!parsed.success) {
       const next: Record<string, FormError> = {};
@@ -217,13 +220,13 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
   function nextStep(){
     if(step===0&&!narrative.trim()){setFieldErrors(v=>({...v,narrative:'narrativeError'}));document.getElementById('narrative')?.focus();return;}
     if(step===1){const missing=concerns.filter(c=>!c.wording.trim());if(missing.length){setFieldErrors(v=>({...v,...Object.fromEntries(missing.map(c=>[c.uiId,'concernError' as const]))}));document.getElementById(missing[0].uiId+'-wording')?.focus();return;}}
-    if(step===2&&!evidenceReady)return;
-    setStep(v=>Math.min(3,v+1));window.scrollTo({top:0,behavior:'instant'});
+    if(step===2&&(!evidenceReady||!assistantReady))return;
+    setProgress(p=>continueWizard(p,true));window.scrollTo({top:0,behavior:'instant'});
   }
   const stepNames=language==='hi'?['घटना का विवरण','मुख्य मुद्दे','साक्ष्य और AI','समीक्षा व भेजें']:['Your story','Issues to address','Evidence & assistance','Review & submit'];
   return <div className="form-layout wizard-layout">
     <aside className="help-column" aria-label={t('sideNav')}>
-      <nav className="wizard-progress" aria-label={language==='hi'?'शिकायत के चरण':'Complaint steps'}><ol>{stepNames.map((name,i)=><li key={name} aria-current={step===i?'step':undefined}><button type="button" disabled={busy||attempt||i>step} className={i===step?'current':i<step?'complete':''} onClick={()=>setStep(i)}><span className="step-number">{i+1}</span><span>{name}</span></button></li>)}</ol></nav>
+      <nav className="wizard-progress" aria-label={language==='hi'?'शिकायत के चरण':'Complaint steps'}><ol>{stepNames.map((name,i)=><li key={name} aria-current={step===i?'step':undefined}><button type="button" disabled={busy||attempt||i>progress.furthest} className={i===step?'current':i<=progress.furthest?'complete':''} onClick={()=>setStep(i)}><span className="step-number">{i+1}</span><span>{name}</span></button></li>)}</ol></nav>
       <section className="side-status" aria-live="polite"><span className="status-dot" aria-hidden="true"/><div><strong>{t('notSubmitted')}</strong><p>{t('issueCount')}: {concerns.length}</p></div></section>
       <section className="help-block"><h2>{t('writingTipTitle')}</h2><p>{t('writingTip')}</p></section>
     </aside>
@@ -264,18 +267,19 @@ function ComplaintForm({ enabled, language, t }: { enabled: boolean; language: L
         <button className="secondary-button" type="button" disabled={busy || attempt || concerns.length >= 30} onClick={() => { changed(); setConcerns((items) => [...items, { uiId: crypto.randomUUID(), type: 'service', wording: '' }]); }}><span aria-hidden="true">＋</span> {t('addConcern')}</button>
         <p className="field-help limit-note">{t('concernLimit')}</p>
       </section>
-      <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);}}/>
-      <IntakeAssistant api={api} language={language} text={narrative} evidenceIds={allEvidenceIds} disabled={!enabled||busy||attempt||!evidenceReady} onSource={id=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();setNarrative(draft.body.report.allegation.value);setConcerns(draft.body.report.concerns.map(c=>({uiId:crypto.randomUUID(),type:c.type,wording:c.field.value})));setDeclaration(false);}}/>
+      <div className="wizard-evidence" data-wizard-stage="2"><EvidenceUpload api={api} language={language} disabled={!enabled||busy||attempt} onChange={(ids,ready,files)=>{changed();setEvidenceIds(ids);setEvidenceReady(ready);setEvidenceFiles(files);}}/>
+      <IntakeAssistant api={api} language={language} text={narrative} evidenceIds={allEvidenceIds} disabled={!enabled||busy||attempt||!evidenceReady} onReadinessChange={setAssistantReady} onSource={(id,file)=>{changed();setAssistantIds(old=>[...new Set([...old,id])]);if(file)setAssistantFiles(old=>[...old.filter(f=>f.id!==id),file]);}} onApply={(draft:IntakeDraft)=>{changed();setIntakeDraft(draft.id);reviewKey.current=crypto.randomUUID();setNarrative(draft.body.report.allegation.value);setConcerns(draft.body.report.concerns.map(c=>({uiId:crypto.randomUUID(),type:c.type,wording:c.field.value})));setDeclaration(false);}}/>
+      {assistantFiles.length>0&&<section className="confirmed-recordings"><h3>{language==='hi'?'निजी रूप से अपलोड की गई रिकॉर्डिंग':'Privately uploaded recordings'}</h3><ul>{assistantFiles.map(file=><li className="evidence-file" key={file.id}><span className="preserve">{file.name}</span> · {fileSize(file.bytes)} <span>{language==='hi'?'अपलोड की पुष्टि हुई':'Upload confirmed'}</span><button type="button" className="danger-button" disabled={busy||attempt} onClick={()=>{changed();setAssistantIds(ids=>ids.filter(id=>id!==file.id));setAssistantFiles(files=>files.filter(f=>f.id!==file.id));}}>{language==='hi'?'हटाएँ':'Remove'}</button></li>)}</ul></section>}
       {intakeDraft&&<p role="status">{language==='hi'?'AI संस्करण चुना गया है। अपने सुधार करें और भेजने से पहले घोषणा की पुष्टि करें।':'AI revision selected. Make your corrections and confirm the declaration before submission. Citizen additions and edits carry no invented AI citations.'}</p>}
       {!evidenceReady&&<p role="status">{language==='hi'?'भेजने से पहले सभी चुनी गई फ़ाइलें अपलोड करें या हटाएँ।':'Upload or remove every selected file before submission.'}</p>}
-      </div><section className="form-section submit-section" data-wizard-stage="3" aria-labelledby="review-title"><div className="review-recap"><h3>{language==='hi'?'भेजने से पहले जाँचें':'Check before submitting'}</h3><p className="preserve">{narrative}</p><ol>{concerns.map(c=><li key={c.uiId} className="preserve">{c.wording}</li>)}</ol><p>{language==='hi'?`साक्ष्य संदर्भ: ${allEvidenceIds.length}`:`Evidence references: ${allEvidenceIds.length}`}</p></div>
+      </div><section className="form-section submit-section" data-wizard-stage="3" aria-labelledby="review-title"><div className="review-recap"><h3>{language==='hi'?'भेजने से पहले जाँचें':'Check before submitting'}</h3><section><h4>{language==='hi'?'आपका विवरण':'Your account'}</h4><p className="preserve">{narrative}</p><button type="button" className="secondary-button" onClick={()=>setStep(0)}>{language==='hi'?'विवरण संपादित करें':'Edit account'}</button></section><section><h4>{language==='hi'?'जवाब चाहने वाले मुद्दे':'Issues requiring answers'}</h4><ol>{concerns.map(c=><li key={c.uiId} className="preserve">{c.wording}</li>)}</ol><button type="button" className="secondary-button" onClick={()=>setStep(1)}>{language==='hi'?'मुद्दे संपादित करें':'Edit issues'}</button></section><section><h4>{language==='hi'?'पुष्ट निजी फ़ाइलें और रिकॉर्डिंग':'Confirmed private evidence and recordings'}</h4>{!allEvidenceIds.length?<p>{language==='hi'?'कोई फ़ाइल संलग्न नहीं है। केवल लिखित शिकायत भेज सकते हैं।':'No files attached. Written-only submission is supported.'}</p>:<ul>{[...evidenceFiles,...assistantFiles].filter(f=>allEvidenceIds.includes(f.id)).map(f=><li key={f.id}>{f.name} · {f.bytes} B · {language==='hi'?'अपलोड की पुष्टि हुई':'Upload confirmed'}</li>)}</ul>}<button type="button" className="secondary-button" onClick={()=>setStep(2)}>{language==='hi'?'फ़ाइलें और सहायता देखें':'Edit evidence or assistance'}</button></section><section><h4>{language==='hi'?'वैकल्पिक सहायता':'Optional assistance'}</h4><p>{intakeDraft?(language==='hi'?'आपने सहायता वाला मसौदा चुना है। ऊपर के शब्दों की जाँच करें; वे आपके सुधारों सहित भेजे जाएँगे। मूल स्रोत और AI संस्करण अलग सुरक्षित रहते हैं।':'You applied an assisted draft. Review your edited words above; original sources and the AI version are retained separately. This is not a verified finding.'):(language==='hi'?'कोई सहायता वाला मसौदा लागू नहीं किया गया। यह आपका लिखा विवरण है।':'No assisted draft has been applied. This is your authored account.')}</p></section></div>
         <h2 id="review-title">{t('reviewTitle')}</h2>
         <label className="declaration" htmlFor="declaration"><input id="declaration" type="checkbox" checked={declaration} disabled={busy||attempt} aria-invalid={!!fieldErrors.declaration} aria-describedby={fieldErrors.declaration ? 'declaration-error' : undefined} onChange={(event) => { changed('declaration'); setDeclaration(event.target.checked); }} /><span>{t('declaration')}</span></label>
         {fieldErrors.declaration && <p className="field-error" id="declaration-error">{t(fieldErrors.declaration)}</p>}
         {error && <p role="alert" className="error">{t(error)}</p>}
-        <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
+        <div className="submit-row"><button type="submit" disabled={!enabled || busy || !evidenceReady || !assistantReady}>{busy ? t('savingComplaint') : t('submitComplaint')}</button>{busy && <p className="live-message" role="status" aria-live="polite">{t('savingWait')}</p>}</div>
         {!enabled && <p className="field-help">{t('startSessionToSubmit')}</p>}<p className="field-help">{t('privateReceipt')}</p>
-      </section><nav className="wizard-actions" aria-label={language==='hi'?'चरण नेविगेशन':'Step navigation'}>{step>0&&<button type="button" className="secondary-button" disabled={busy||attempt} onClick={()=>{setStep(v=>Math.max(0,v-1));window.scrollTo({top:0,behavior:'instant'});}}>{language==='hi'?'पिछला':'Back'}</button>}{step<3&&<button type="button" disabled={busy||attempt||step===2&&!evidenceReady} onClick={nextStep}>{language==='hi'?'आगे बढ़ें':'Continue'} <span aria-hidden="true">→</span></button>}</nav>
+      </section><nav className="wizard-actions" aria-label={language==='hi'?'चरण नेविगेशन':'Step navigation'}>{step>0&&<button type="button" className="secondary-button" disabled={busy||attempt} onClick={()=>{setStep(v=>Math.max(0,v-1));window.scrollTo({top:0,behavior:'instant'});}}>{language==='hi'?'पिछला':'Back'}</button>}{step<3&&<button type="button" disabled={busy||attempt||step===2&&(!evidenceReady||!assistantReady)} onClick={nextStep}>{language==='hi'?'आगे बढ़ें':'Continue'} <span aria-hidden="true">→</span></button>}</nav>
     </form>
   </div>;
 }
@@ -374,6 +378,7 @@ function CasePage({ ready, signedIn, language, t }: { ready: boolean; signedIn: 
      <ol className="case-progress"><li className="complete"><span>✓</span><div><strong>{language==='hi'?'शिकायत दर्ज':'Record created'}</strong><small>{language==='hi'?'निजी रसीद उपलब्ध':'Private receipt available'}</small></div></li>
      <li className={responseCheck==='available'?'complete':''}><span>{responseCheck==='available'?'✓':'2'}</span><div><strong>{language==='hi'?'कार्यालय का जवाब':'Office response'}</strong><small>{responseCheck==='available'?(language==='hi'?'जवाब दर्ज है':'A response is recorded'):responseCheck==='missing'?(language==='hi'?'अभी जवाब दर्ज नहीं':'Not recorded yet'):responseCheck==='error'?(language==='hi'?'स्थिति नहीं जाँची जा सकी':'Could not verify status'):(language==='hi'?'स्थिति देखी जा रही है':'Checking status')}</small></div></li>
      <li className={responseCheck==='available'?'ready':''}><span>3</span><div><strong>{language==='hi'?'जवाब देखें और तुलना करें':'Read and compare'}</strong><small>{responseCheck==='available'?(language==='hi'?'अब जवाब खोल सकते हैं':'Available now'):(language==='hi'?'जवाब दर्ज होने पर खुलेगा':'Available after a recorded response')}</small></div></li></ol>
+     {(responseCheck==='error'||responseCheck==='missing')&&<p>{language==='hi'?'यह जाँचता है कि कोई नया कार्यालय जवाब दर्ज हुआ है या नहीं।':'This checks whether a new office response has been recorded.'}</p>}
      {(responseCheck==='error'||responseCheck==='missing')&&<button type="button" className="secondary-button" onClick={()=>setRetry(v=>v+1)}>{language==='hi'?'नया जवाब देखें':'Check for a new reply'}</button>}
     </section>}
     {activePanel==='overview'&&<section className="saved-account" aria-labelledby="account-title"><h2 id="account-title">{t('originalAccount')}</h2><p className="preserve">{loadedRecord.narrative}</p><h2 className="concerns-heading">{t('recordedIssues')}</h2>

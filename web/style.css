@@ -479,3 +479,15 @@ select:focus-visible,button:focus-visible{position:relative;z-index:1;}
 @media(max-width:850px){.welcome-hero{grid-template-columns:1fr;padding:22px 0 35px;gap:25px;}.welcome-copy h1{font-size:42px;}.welcome-illustration{max-width:620px;}.welcome-process{padding:36px 0;}.case-progress{grid-template-columns:1fr;gap:4px;}}
 @media(max-width:560px){.welcome-copy h1{font-size:37px;}.welcome-summary{font-size:17px;}.welcome-actions{align-items:stretch;}.welcome-actions>.primary-link,.welcome-actions>.quiet-link{width:100%;}.welcome-illustration{padding:18px;}.welcome-final{flex-direction:column;align-items:stretch;padding:22px;}.welcome-final .primary-link{width:100%;}.process-list article{grid-template-columns:40px minmax(0,1fr);gap:11px;}.choice-pill{width:100%;}.choice-pill span{width:100%;}.ai-recording-actions,.recording-actions{align-items:stretch;}.ai-recording-actions>button,.recording-actions>button{width:100%;}.guidance-option{grid-template-columns:31px minmax(0,1fr);gap:10px;}.case-status-panel{padding:15px;}.report-field blockquote{overflow-wrap:anywhere;}}
 @media print{.case-status-panel{break-inside:avoid;}.welcome-page{display:none!important;}.case-tabs,.case-next-actions,.guidance-actions{display:none!important;}}
+/* Focused stabilization: readable text, destructive actions and preserved wizard layout. */
+.form-section p,.review-recap,.saved-account>p,.notice>p{font-size:16px;line-height:1.7;}
+.field-help,.section-intro,.wizard-stage-heading span{font-size:15px;line-height:1.6;}
+.wizard-progress{width:100%;}.wizard-progress button{justify-content:flex-start;}
+.wizard-actions{position:sticky;bottom:0;background:#fff;z-index:5;box-shadow:0 -3px 10px #172a2d0a;}
+.review-recap>section{padding:16px 0;border-bottom:1px solid var(--line);}.review-recap h4{font-size:17px;margin:0 0 8px;}
+.danger-button,button.danger-button{min-height:44px;padding:9px 16px;border:1px solid #aa3939;border-radius:7px;background:#fff5f4;color:#8b2525;font-weight:650;text-decoration:none;}
+button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outline:3px solid #126c68;outline-offset:3px;}
+.checkbox-option{display:flex;align-items:flex-start;gap:12px;line-height:1.65;margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:7px;overflow-wrap:anywhere;min-width:0;}
+.checkbox-option input[type=checkbox]{width:20px;height:20px;margin:3px 0 0;flex:0 0 20px;}
+.evidence-player audio{display:block;width:100%;max-width:480px;margin:12px 0;}
+@media(max-width:600px){.wizard-actions{padding:12px;gap:12px;}.wizard-progress button{width:100%;}.review-recap{padding:12px;}.saved-account fieldset{min-width:0;}}

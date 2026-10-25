@@ -13,20 +13,21 @@ import {buildIntake} from './intake-ai.js';
 import {generationSchema,safeFilename} from '../domain/intake-ai.js';
 import {escalationCommands,type EscalationAction} from '../domain/escalation.js';
 type Store=Pick<ReturnType<typeof caseStore>,'submit'|'read'> & Partial<Pick<ReturnType<typeof caseStore>,'workflowRead'|'workflowCommit'|'recordRead'|'recordBundle'|'evidenceGet'|'evidenceStage'|'intakeCommand'|'escalationRead'|'escalationCommand'|'disputeRead'|'disputeSubmit'>>;
-type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>};
-export function createApp({config,store,verify}:Dependencies) {
+type Dependencies={config:ReturnType<typeof configuration>; store?:Store; verify?:(token:string)=>Promise<string|null>;developerFixtureAccess?:(actor:string)=>boolean};
+export function createApp({config,store,verify,developerFixtureAccess}:Dependencies) {
   const app=express(); app.disable('x-powered-by');
   app.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"});next();});
   app.use(express.json({limit:complaintRequestLimitBytes}));
   app.get('/api/health',(_req,res)=>res.json({status:'ok',configured:config.ready,stage:'task-01-foundation'}));
   app.get('/api/config',(_req,res)=>res.json(config.ready?{ready:true,url:config.url,publishableKey:config.key}:{ready:false,message:'Dedicated Supabase configuration is needed. No complaint can be submitted yet.'}));
-  app.get('/api/fixtures/intake.wav',(_req,res)=>res.type('audio/wav').sendFile(path.resolve('content/b02/fictional-report.wav')));
   app.use('/api',async(req,res,next)=>{
     const match=/^Bearer ([^\s]+)$/.exec(req.headers.authorization??'');
     if(!match){res.status(401).json({error:'A single valid managed session is required.'});return;}
     if(!config.ready||!store||!verify){res.status(503).json({error:'SETUP_NEEDED'});return;}
     try {const actor=await verify(match[1]); if(!actor||!uuidSchema.safeParse(actor).success){res.status(401).json({error:'Invalid or expired credentials.'});return;} res.locals.actor=actor;res.locals.token=match[1];next();} catch {res.status(503).json({error:'Authentication service unavailable. Please retry.'});}
   });
+  // Test harness injection only. Production never installs this capability.
+  app.get('/api/fixtures/intake.wav',(_req,res)=>{if(!developerFixtureAccess?.(res.locals.actor)){res.status(404).json({error:'Not found.'});return;}res.type('audio/wav').sendFile(path.resolve('content/b02/fictional-report.wav'));});
   let exporting=false;const exportBudgets=new Map<string,{time:number;count:number}>();
   app.post('/api/packages/:id',async(req,res,next)=>{const id=uuidSchema.safeParse(req.params.id),body=packageRequestSchema.safeParse(req.body);if(!id.success||!body.success){res.status(400).json({error:'Invalid package selection.'});return;}const actor=res.locals.actor;try{if(!await store!.read(actor,id.data)){res.status(403).json({error:'Denied.'});return;}const now=Date.now();let b=exportBudgets.get(actor);if(!b||now-b.time>=600000){b={time:now,count:0};if(exportBudgets.size>=256)exportBudgets.delete(exportBudgets.keys().next().value!);exportBudgets.set(actor,b);}if(exporting||b.count>=3){res.status(429).json({error:'PACKAGE_BUSY_OR_RATE_LIMITED'});return;}exporting=true;b.count++;try{const bytes=await buildPackage(store as ReturnType<typeof caseStore>,actor,id.data,body.data.evidenceIds,path=>privateStorage(config.url!,config.key!,res.locals.token).read(path));res.set({'Content-Type':'application/zip','Content-Disposition':"attachment; filename*=UTF-8''janvaani-"+id.data+'.zip','Cache-Control':'no-store','Content-Security-Policy':"sandbox; default-src 'none'"});res.send(bytes);}finally{exporting=false;}}catch(e){next(e);}});
   const auditBusy=new Set<string>();const auditBudgets=new Map<string,{time:number;count:number}>();
@@ -45,6 +46,7 @@ export function createApp({config,store,verify}:Dependencies) {
   app.post('/api/intake/drafts',async(req,res,next)=>{
     const key=uuidSchema.safeParse(req.get('Idempotency-Key')),input=generationSchema.safeParse(req.body);if(!key.success||!input.success){res.status(400).json({error:'Invalid intake request.'});return;}
     const actor=res.locals.actor;try{
+      if(input.data.mode==='prepared'&&!developerFixtureAccess?.(actor)){res.status(403).json({error:'Developer fixtures are not available in citizen intake.'});return;}
       const prior=await store!.intakeCommand!(actor,'find',key.data,{});if(prior){if(JSON.stringify(prior.body.request)!==JSON.stringify(input.data)){/* Compare normalized JSON objects independent of key order. */const a=prior.body.request;if(a.text!==input.data.text||a.mode!==input.data.mode||JSON.stringify(a.evidenceIds)!==JSON.stringify(input.data.evidenceIds)){res.status(409).json({error:'Intake key conflict.'});return;}}res.json(prior);return;}
       const now=Date.now();let budget=intakeCounts.get(actor);if(!budget||now-budget.start>600000){budget={start:now,count:0};if(intakeCounts.size>=256)intakeCounts.delete(intakeCounts.keys().next().value!);intakeCounts.set(actor,budget);}
       if(intakeBusy.has(actor)||intakeBusy.size>=2||budget.count>=6){res.status(429).json({error:'PROCESSING_BUSY_OR_RATE_LIMITED'});return;}budget.count++;intakeBusy.add(actor);
@@ -74,10 +76,11 @@ export function createApp({config,store,verify}:Dependencies) {
   });
   app.get('/api/evidence/:id/:action',async(req,res,next)=>{
     try{
-      const id=uuidSchema.safeParse(req.params.id);if(!id.success||!['download','verify'].includes(String(req.params.action))){res.status(400).json({error:'Invalid evidence request.'});return;}
+      const id=uuidSchema.safeParse(req.params.id);if(!id.success||!['download','verify','playback'].includes(String(req.params.action))){res.status(400).json({error:'Invalid evidence request.'});return;}
       const file=await store!.evidenceGet!(res.locals.actor,id.data);
       const bytes=await privateStorage(config.url!,config.key!,res.locals.token).read(file.object_path);
       if(req.params.action==='verify'){res.json({id:id.data,state:bytes.length===file.byte_count&&fingerprint(bytes)===file.sha256?'verified':'mismatch'});return;}
+      if(req.params.action==='playback'){const type=({'audio/wav':'audio/wav','audio/mpeg':'audio/mpeg','audio/ogg':'audio/ogg','video/webm':'audio/webm'} as Record<string,string>)[file.media_type];if(!type)throw Object.assign(Error('Not supported for playback'),{code:'22023'});if(bytes.length!==file.byte_count||fingerprint(bytes)!==file.sha256)throw Object.assign(Error('Evidence mismatch'),{code:'HC409'});res.type(type).send(bytes);return;}
       res.set({'Content-Type':'application/octet-stream','Content-Disposition':"attachment; filename=\"evidence\"; filename*=UTF-8''"+encodeURIComponent(safeFilename(file.display_name)),'Content-Security-Policy':"sandbox; default-src 'none'"});res.send(bytes);
     }catch(error){next(error);}
   });

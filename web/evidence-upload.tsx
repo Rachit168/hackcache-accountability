@@ -1,14 +1,15 @@
 import React,{useRef,useState} from 'react';
 import type {Language} from './i18n';
 import {fileSize} from '../domain/intake-ai';
+import type {EvidenceSummary} from './evidence-summary';
 type Item={key:string;file:File;state:'selected'|'uploading'|'ready'|'failed';id?:string;failure?:string};
 type Api=<T>(path:string,init?:RequestInit)=>Promise<T>;
 const MAX_FILES=5,MAX_BYTES=8*1024*1024,MAX_TOTAL=30*1024*1024;
 const allowed=/\.(?:jpe?g|png|pdf|txt|wav|mp3|ogg|webm|mp4)$/i;
-export function EvidenceUpload({api,language,disabled,onChange}:{api:Api;language:Language;disabled:boolean;onChange:(ids:string[],ready:boolean)=>void}){
+export function EvidenceUpload({api,language,disabled,onChange}:{api:Api;language:Language;disabled:boolean;onChange:(ids:string[],ready:boolean,files:EvidenceSummary[])=>void}){
  const [items,setItems]=useState<Item[]>([]),[issue,setIssue]=useState<'limits'|'format'|null>(null);
  const itemsRef=useRef<Item[]>([]),processing=useRef(false),hi=language==='hi';
- function publish(next:Item[]){itemsRef.current=next;setItems(next);onChange(next.flatMap(v=>v.state==='ready'&&v.id?[v.id]:[]),next.every(v=>v.state==='ready'));}
+ function publish(next:Item[]){itemsRef.current=next;setItems(next);const ready=next.filter(v=>v.state==='ready'&&v.id);onChange(ready.map(v=>v.id!),next.every(v=>v.state==='ready'),ready.map(v=>({id:v.id!,name:v.file.name,bytes:v.file.size})));}
  function change(key:string,updates:Partial<Item>){publish(itemsRef.current.map(v=>v.key===key?{...v,...updates}:v));}
  async function upload(item:Item){
   change(item.key,{state:'uploading'});
@@ -49,7 +50,7 @@ export function EvidenceUpload({api,language,disabled,onChange}:{api:Api;languag
    <div className="evidence-file-main"><strong className="preserve">{item.file.name}</strong><span>{fileSize(item.file.size)}</span></div>
    <span role="status" className={'upload-state upload-'+item.state}>{({selected:hi?'प्रतीक्षा में':'Queued',uploading:hi?'अपलोड जारी है…':'Uploading…',ready:hi?'अपलोड की पुष्टि हुई':'Upload confirmed',failed:hi?'अपलोड असफल या अपुष्ट':'Upload failed or unconfirmed'})[item.state]}</span>{item.state==='failed'&&<p role="alert" className="field-help">{({size:hi?'फ़ाइल बहुत बड़ी है।':'File too large.',format:hi?'फ़ाइल का प्रकार या नाम स्वीकार नहीं हुआ।':'File type or name was rejected.',login:hi?'सत्र समाप्त हुआ। उसी खाते में दोबारा जुड़ें।':'Session expired. Reconnect using the same identity.',access:hi?'अपलोड की अनुमति नहीं मिली।':'Upload access denied.',uncertain:hi?'पुरानी अपलोड स्थिति स्पष्ट नहीं है। इसी फ़ाइल से पुनः प्रयास करें।':'Previous upload outcome is uncertain. Retry the same file.',network:hi?'इंटरनेट कनेक्शन जाँचें, फिर प्रयास करें।':'Network unavailable. Check connection and retry.',service:hi?'सेवा उपलब्ध नहीं है। फिर प्रयास करें।':'Service unavailable. Retry later.'} as Record<string,string>)[item.failure??'service']}</p>}
    <div className="evidence-actions">{item.state==='failed'&&<button type="button" className="secondary-button" disabled={disabled||working} onClick={()=>{change(item.key,{state:'selected'});void flush();}}>{hi?'उसी अपलोड का पुनः प्रयास':'Retry same upload'}</button>}
-    <button type="button" className="text-button" disabled={disabled||working} onClick={()=>{publish(itemsRef.current.filter(v=>v.key!==item.key));setIssue(null);}}>{hi?'हटाएँ':'Remove'}</button></div>
+    <button type="button" className="danger-button" disabled={disabled||working} onClick={()=>{publish(itemsRef.current.filter(v=>v.key!==item.key));setIssue(null);}}>{hi?'हटाएँ':'Remove'}</button></div>
   </li>)}</ul>}
  </section>;
 }

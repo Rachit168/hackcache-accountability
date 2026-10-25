@@ -43,7 +43,8 @@ describe('UX structural regressions (source checks, not browser proof)',()=>{
  it('provides clearly separated recording and help actions',()=>{
   expect(intake).toContain('className="recording-preview"');
   expect(intake).toContain('className="recording-actions"');
-  expect(intake).toContain('className="processing-choice"');
+  expect(intake).toContain('Include uploaded sources');
+  expect(intake).not.toContain('className="processing-choice"');
   expect(guidance).toContain('aria-expanded={expanded.includes(c.id)}');
   expect(guidance).toContain('Visit official source');
  });

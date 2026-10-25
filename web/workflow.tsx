@@ -11,6 +11,7 @@ import {Guidance} from './guidance';
 import {guidanceSituation} from './guidance-state';
 import {CasePackage} from './case-package';
 import {workflowLoadMessage} from './workflow-load';
+import {StaffCaseJourney} from './staff-case-journey';
 import { commandFailure, isCompletedCommand, newCommandKey, workflowScope, workflowSnapshot, writeConfirmed, type PendingWorkflowCommand, type WorkflowAction } from './workflow-state';
 type Concern={id:string;type:string;wording:string};
 type Content={narrative:string;reason:string;concerns:{sourceId:string;type:string;wording:string;reason:string}[]};
@@ -53,6 +54,7 @@ export function WorkflowWorkspace({api,language,caseId,panel}:{api:Api;language:
   </section>}
  {id&&<>{!panel&&<><Link className="staff-return" to="/staff">{language==='hi'?'← मेरे मामलों में वापस':'← Back to my cases'}</Link>
   <nav className="staff-case-tabs" aria-label={language==='hi'?'मामले के भाग':'Case sections'}>{(['case','evidence','actions','history'] as const).filter(key=>key!=='evidence'||view.kind!=='office').map(key=><button type="button" key={key} className={staffTab===key?'active':''} aria-current={staffTab===key?'page':undefined} onClick={()=>setStaffTab(key)}>{({case:language==='hi'?'विवरण':'Case overview',evidence:language==='hi'?'साक्ष्य जाँच':'Evidence & checks',actions:language==='hi'?'कार्रवाई':'Take action',history:language==='hi'?'इतिहास और समय':'History & progress'} as const)[key]}</button>)}</nav>
+   {staffTab==='case'&&<StaffCaseJourney view={view} language={language} onNavigate={setStaffTab}/>}
   {staffTab==='case'&&<section className="staff-case-overview"><h3>{language==='hi'?'मामले का सारांश':'Case details'}</h3><p className="field-help">{view.kind==='office'?(language==='hi'?'आपके विभाग को जारी जानकारी ही दिखाई जाती है।':'Only the office-facing information released to your department is displayed.'):(language==='hi'?'यह निजी मूल शिकायत है; केवल आवंटित समीक्षक इसे देख सकते हैं।':'Private original: accessible only to the assigned reviewer.')}</p><p className="preserve">{view.kind==='office'?(view.versions?.[view.versions.length-1]?.content.narrative??t.none):(view.narrative??t.none)}</p><h4>{language==='hi'?'मूल मुद्दे':'Recorded issues'}</h4><ol>{(view.kind==='office'?(view.versions?.[view.versions.length-1]?.content.concerns??[]).map(c=>({wording:c.wording,type:c.type})):(view.concerns??[])).map((c,i)=><li key={i}><strong>{translate(language,c.type as 'service'|'conduct'|'mixed')}</strong><p className="preserve">{c.wording}</p></li>)}</ol></section>}
   </>}
  {!panel&&staffTab==='evidence'&&view.kind!=='office'&&<Disputes key={id} id={id} api={api} language={language}/>}

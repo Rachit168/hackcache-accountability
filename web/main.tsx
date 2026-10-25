@@ -98,7 +98,7 @@ function App() {
   return <>
     <div className="demo-strip"><strong>{t('demo')}</strong><span>{t('fictional')}</span></div>
     <header className="site-header">
-      <span className="brand"><span className="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H10l-5 4v-14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10.5h8M8 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span><span>Janvaani</span></span>
+      <Link className="brand" to="/" aria-label={t("brandHome")}><span className="brand-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M5 5.5h14v10H10l-5 4v-14Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M8 10.5h8M8 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span><span>Janvaani</span></Link>
       <div className="header-tools"><LanguageToggle language={language} setLanguage={setLanguage} t={t} /></div>
     </header>
     <main>
@@ -121,7 +121,7 @@ function App() {
       </Routes>
       <section id="privacy" className="privacy" aria-labelledby="privacy-title"><h2 id="privacy-title">{t('usingDemo')}</h2><p>{t('privacyBody')}</p></section>
     </main>
-    <footer><span>Janvaani · Hack Cache</span><span>{t('footerDemo')}</span><Link to="/staff">{language==='hi'?'डेमो कर्मचारी प्रवेश':'Staff demo access'}</Link></footer>
+    <footer><span>Janvaani · Hack Cache</span><span>{t('footerDemo')}</span></footer>
   </>;
 }
 

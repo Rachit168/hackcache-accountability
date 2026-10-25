@@ -37,7 +37,7 @@ describe('citizen questions reach exactly one bounded AI request',()=>{
   expect(body.messages[0].content).toContain('EVERY distinct question');
   expect(INTAKE_DRAFT_INSTRUCTIONS).toContain('citizen’s questions, not evidence');
   expect(INTAKE_DRAFT_INSTRUCTIONS).toContain('DETAILS THE CITIZEN WOULD NEED TO SUPPLY');
-  expect(INTAKE_DRAFT_INSTRUCTIONS).toContain('never include it in missing');
+  expect(INTAKE_DRAFT_INSTRUCTIONS).toContain('Never put a citizen-requested answer in missing');
  });
  it('rejects attempting to establish events from a citizen question citation',()=>{
   const report=preparedReport([written]);

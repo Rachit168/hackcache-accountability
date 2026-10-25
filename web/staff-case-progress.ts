@@ -57,3 +57,15 @@ export function displayedWorkflowVersions<T extends {id:string}>(
  const chosen=selection==='latest'?versions.at(-1)?.id:selection;
  return versions.filter(version=>version.id===chosen);
 }
+
+/** Determine the single pending operation for a version actually returned by
+ * the server. History is scoped by version ID, never by case-wide last action.
+ * A response means the office action is recorded, not that the case is resolved.
+ */
+export function nextOfficeVersionAction(
+ versionId:string,history:readonly {versionId:string;action:string}[]|undefined
+):'acknowledge'|'response'|'complete'{
+ const events=(history??[]).filter(event=>event.versionId===versionId);
+ if(events.some(event=>event.action==='response'))return 'complete';
+ return events.some(event=>event.action==='acknowledge')?'response':'acknowledge';
+}

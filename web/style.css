@@ -595,3 +595,5 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 .legal-aid-contact>a:first-of-type{color:#195845;font-size:39px;line-height:1.1;font-weight:800;text-decoration:none}
 .legal-aid-contact>a:last-child{font-weight:750;font-size:15px}
 @media(max-width:650px){.legal-aid-action{grid-template-columns:1fr;padding:18px;gap:14px}.legal-aid-contact{border-left:0;border-top:1px solid #c6d9ca;padding:16px 0 0}}
+
+.guidance-more{display:flex;margin:17px auto 3px!important;min-width:min(100%,230px);justify-content:center}

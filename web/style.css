@@ -632,3 +632,10 @@ button.danger-button:hover{background:#fce5e3;}.danger-button:focus-visible{outl
 .staff-journey-steps small{color:#526c60;font-size:13px;font-weight:650}
 .staff-journey>.field-help{margin:12px 0 0}
 @media(max-width:760px){.staff-journey-heading{align-items:stretch;flex-direction:column;gap:14px}.staff-journey-heading button{align-self:flex-start}.staff-journey-steps{grid-template-columns:1fr;gap:8px;margin-top:17px}.staff-journey{padding:15px}}
+
+
+/* Each office action is scoped to the chosen released version; other drafts stay intact. */
+.staff-version-select{display:grid;gap:8px;max-width:620px;padding:17px 19px;margin:18px 0;background:#f4f8f4;border:1px solid #d1e0d4;border-radius:8px}
+.staff-version-select strong{font-size:16px;color:#23493c}
+.staff-version-select select{width:100%;max-width:100%;min-width:0;font-size:16px;min-height:46px;background:#fff}
+.staff-version-select .field-help{margin:0;line-height:1.5}

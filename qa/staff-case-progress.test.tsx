@@ -1,7 +1,8 @@
 import {describe,expect,it,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {staffCaseJourney,displayedWorkflowVersions} from '../web/staff-case-progress';
+import {staffCaseJourney,displayedWorkflowVersions,nextOfficeVersionAction} from '../web/staff-case-progress';
 import {StaffCaseJourney} from '../web/staff-case-journey';
 
 const released={id:'version-1'};
@@ -49,6 +50,21 @@ describe('staff case action journey (data-backed and role scoped)',()=>{
   expect(displayedWorkflowVersions('reviewer',versions,'latest')).toEqual(versions);
   expect(displayedWorkflowVersions('citizen',versions,'latest')).toEqual(versions);
   expect(displayedWorkflowVersions('office',undefined,'latest')).toEqual([]);
+ });
+ it('permits only the next office action per authorized version and prevents repeated acknowledgements',()=>{
+  const old=[{versionId:'earlier',action:'response'}];
+  expect(nextOfficeVersionAction('latest',old)).toBe('acknowledge');
+  expect(nextOfficeVersionAction('latest',[...old,{versionId:'latest',action:'acknowledge'}])).toBe('response');
+  expect(nextOfficeVersionAction('latest',[...old,{versionId:'latest',action:'acknowledge'},{versionId:'latest',action:'response'}])).toBe('complete');
+  expect(nextOfficeVersionAction('latest',[{versionId:'latest',action:'response'}])).toBe('complete');
+  expect(nextOfficeVersionAction('latest',undefined)).toBe('acknowledge');
+ });
+ it('renders editable office controls only in actions, never in case history',()=>{
+  const src=readFileSync(new URL('../web/workflow.tsx',import.meta.url),'utf8');
+  expect(src).toContain("view.kind==='office'&&!panel&&staffTab==='actions'&&(()=>{const action=nextOfficeVersionAction");
+  expect(src).toContain("action==='complete'");
+  expect(src).toContain('Response recorded for this version');
+  expect(src).toContain("setStaffTab('history')");
  });
  it('has native next-action button, accessible milestone list and Hindi copy',()=>{
   const html=renderToStaticMarkup(<StaffCaseJourney view={{kind:'office',versions:[released],history:[ack]}} language="hi" onNavigate={vi.fn()}/>);

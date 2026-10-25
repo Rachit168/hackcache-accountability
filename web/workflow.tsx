@@ -13,6 +13,7 @@ import {CasePackage} from './case-package';
 import {workflowLoadMessage} from './workflow-load';
 import {StaffCaseJourney} from './staff-case-journey';
 import {displayedWorkflowVersions,nextOfficeVersionAction} from './staff-case-progress';
+import {StaffRoleSummary} from './staff-role-summary';
 import { commandFailure, isCompletedCommand, newCommandKey, workflowScope, workflowSnapshot, writeConfirmed, type PendingWorkflowCommand, type WorkflowAction } from './workflow-state';
 type Concern={id:string;type:string;wording:string};
 type Content={narrative:string;reason:string;concerns:{sourceId:string;type:string;wording:string;reason:string}[]};
@@ -44,6 +45,7 @@ export function WorkflowWorkspace({api,language,caseId,panel}:{api:Api;language:
  const role=view.kind==='reviewer'?t.reviewerLabel:view.kind==='office'?t.officeRole:t.citizenLabel;
  if(panel==='none')return null;
  return <section className="saved-account workflow-workspace">{!panel?<><h2>{t.title}</h2><p>{t.kind}: <strong>{role}</strong>{view.kind==='office'&&<> · {t.officeLabel}: {officeLabel(view.office??view.versions?.[0]?.office,language,t)}</>}</p></>:panel==='response'?<><h2>{language==='hi'?'दर्ज कार्यालय जवाब':'Recorded office reply'}</h2><p className="field-help">{language==='hi'?'यह काल्पनिक कार्यालय द्वारा दर्ज कथन है; इससे समस्या हल होने की पुष्टि नहीं होती।':'This is the fictional office’s recorded statement. A response does not prove the issue was resolved.'}</p></>:null}
+ {view.cases&&<StaffRoleSummary view={view} language={language}/>}
  {view.cases&&<section className="staff-inbox">
    <div className="staff-inbox-header"><div><p className="eyebrow">{language==='hi'?'आपकी अधिकृत सूची':'Your authorized queue'}</p><h2>{language==='hi'?'मेरे मामले':'My cases'}</h2><p>{view.kind==='office'?(language==='hi'?'सिर्फ़ इस विभाग को जारी किए गए रिकॉर्ड':'Only versions released to your department'):(language==='hi'?'सिर्फ़ आपको आवंटित मामले':'Only your assigned cases')}</p></div>
    <div className="staff-inbox-total"><strong>{view.cases.length}</strong><span>{language==='hi'?'अधिकृत मामले':'Accessible cases'}</span></div></div>
